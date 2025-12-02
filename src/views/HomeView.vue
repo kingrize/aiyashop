@@ -8,10 +8,10 @@ import HeartCalculator from '../components/HeartCalculator.vue';
 import { Wind, Heart, Flame, Sparkles, Star, Moon, ShieldCheck, Smile, Calculator, X, Info, UserCheck, Wallet, Plus, Pencil, Check, Crown, TrendingUp, ChevronRight, MessageCircle, HelpCircle, ChevronDown, Lock, Clock, Gift, MapPin } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 
-// IMPORT GAMBAR ASSETS YAP
+// IMPORT GAMBAR ASSETS
 import skyKidGif from '../assets/skykid.gif'; 
 import skykidMoth from '../assets/moth.gif';
-import skyKey from '../assets/keySky.gif';
+
 
 const router = useRouter();
 const userStore = useUserStore(); 
@@ -25,7 +25,7 @@ const nameInputRef = ref(null);
 
 const memberLevel = computed(() => {
   const totalSpent = userStore.memberData?.totalTopUp || userStore.memberData?.saldo || 0;
-  if (totalSpent > 1000000) return { name: 'DEMON KING 👑', color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-metal/50 dark:text-amber-400 dark:border-metal', icon: Crown };
+  if (totalSpent > 1000000) return { name: 'Elder 👑', color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-metal/50 dark:text-amber-400 dark:border-metal', icon: Crown };
   if (totalSpent > 500000) return { name: 'Phoenix 🔥', color: 'text-rose-500 bg-rose-50 border-rose-100 dark:bg-metal/50 dark:text-rose-400 dark:border-metal', icon: Flame };
   if (totalSpent > 100000) return { name: 'Butterfly 🦋', color: 'text-indigo-500 bg-indigo-50 border-indigo-100 dark:bg-metal/50 dark:text-indigo-400 dark:border-metal', icon: Star };
   return { name: 'Moth 🕯️', color: 'text-slate-500 bg-slate-50 border-slate-100 dark:bg-metal/50 dark:text-slate-400 dark:border-metal', icon: UserCheck };
@@ -189,7 +189,7 @@ const faqs = [
           <div class="flex items-center justify-center gap-2">
             <h2 class="text-3xl md:text-4xl font-bold text-slate-700 dark:text-slate-200 mt-2">Cara Order </h2>
             <!-- GIF Sky Kid Kecil -->
-            <img :src="skyKey" class="w-12 h-12 object-contain" />
+            <img :src="skyKidGif" class="w-12 h-12 object-contain" />
           </div>
           <span class="text-xs font-bold text-sky-400 uppercase tracking-wider bg-sky-50 dark:bg-graphite px-3 py-1 rounded-full inline-block mt-2">Easy Peasy</span>
           <p class="text-slate-400 mt-2 max-w-lg mx-auto">Ga perlu ribet, tinggal pilih, bayar, dan terima beres. Akun aman!</p>
@@ -208,7 +208,7 @@ const faqs = [
       </div>
     </section>
 
-    <!-- SERVICES SECTION (DENGAN GIF & ANIMASI) @jiya.py-->
+    <!-- SERVICES SECTION (DENGAN GIF & ANIMASI) -->
     <section id="services" class="py-20 px-6 bg-sky-50/30 dark:bg-graphite/30 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
       <div class="container mx-auto max-w-6xl">
         <div class="text-center mb-10 relative">
