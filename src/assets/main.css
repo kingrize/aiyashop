@@ -1,0 +1,38 @@
+/* LOKASI FILE: src/assets/main.css */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cream text-slate-600 antialiased selection:bg-sky-200 selection:text-sky-800 font-sans;
+    
+    /* Background Polkadot (Fix Error Opacity) */
+    background-image: 
+      radial-gradient(rgba(79, 195, 247, 0.1) 0.5px, transparent 0.5px), 
+      radial-gradient(rgba(79, 195, 247, 0.1) 0.5px, #FDFBF7 0.5px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
+  }
+}
+
+@layer components {
+  /* Efek Kartu Kaca */
+  .card-soft {
+    @apply bg-white/80 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] rounded-[2rem];
+  }
+
+  /* Efek Tombol Mantul */
+  .btn-bouncy {
+    @apply transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:scale-95 hover:-translate-y-0.5;
+  }
+
+  /* Custom Slider Styling */
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: transparent; 
+  }
+}
