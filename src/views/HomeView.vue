@@ -8,7 +8,7 @@ import HeartCalculator from '../components/HeartCalculator.vue';
 import { Wind, Heart, Flame, Sparkles, Star, Moon, ShieldCheck, Smile, Calculator, X, Info, UserCheck, Wallet, Plus, Pencil, Check, Crown, TrendingUp, ChevronRight, MessageCircle, HelpCircle, ChevronDown, Lock, Clock, Gift, MapPin } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 
-// IMPORT GAMBAR ASSETS
+// IMPORT GAMBAR ASSETS YAP
 import skyKidGif from '../assets/skykid.gif'; 
 import skykidMoth from '../assets/moth.gif';
 import skyKey from '../assets/keySky.gif';
@@ -25,7 +25,7 @@ const nameInputRef = ref(null);
 
 const memberLevel = computed(() => {
   const totalSpent = userStore.memberData?.totalTopUp || userStore.memberData?.saldo || 0;
-  if (totalSpent > 1000000) return { name: 'Elder 👑', color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-metal/50 dark:text-amber-400 dark:border-metal', icon: Crown };
+  if (totalSpent > 1000000) return { name: 'DEMON KING 👑', color: 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-metal/50 dark:text-amber-400 dark:border-metal', icon: Crown };
   if (totalSpent > 500000) return { name: 'Phoenix 🔥', color: 'text-rose-500 bg-rose-50 border-rose-100 dark:bg-metal/50 dark:text-rose-400 dark:border-metal', icon: Flame };
   if (totalSpent > 100000) return { name: 'Butterfly 🦋', color: 'text-indigo-500 bg-indigo-50 border-indigo-100 dark:bg-metal/50 dark:text-indigo-400 dark:border-metal', icon: Star };
   return { name: 'Moth 🕯️', color: 'text-slate-500 bg-slate-50 border-slate-100 dark:bg-metal/50 dark:text-slate-400 dark:border-metal', icon: UserCheck };
