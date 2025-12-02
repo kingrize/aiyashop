@@ -3,15 +3,15 @@ import { getFirestore } from 'firebase/firestore';
 import { getAuth } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
 
-// KONFIGURASI FIREBASE KAMU
+// KONFIGURASI FIREBASE MENGGUNAKAN ENVIRONMENT VARIABLE
 const firebaseConfig = {
-  apiKey: "AIzaSyCKBNalW1dx35fK7c3Jjl-Rb7gZ6prnLw0",
-  authDomain: "aiyashop.firebaseapp.com",
-  projectId: "aiyashop",
-  storageBucket: "aiyashop.firebasestorage.app",
-  messagingSenderId: "984212946468",
-  appId: "1:984212946468:web:2e90fee6155f793303e2b1",
-  measurementId: "G-8M2CT0Q95N"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
