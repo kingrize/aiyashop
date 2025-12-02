@@ -1,3 +1,4 @@
+// LOKASI FILE: src/stores/promo.js
 import { defineStore } from 'pinia';
 import { db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
@@ -6,35 +7,26 @@ export const usePromoStore = defineStore('promo', {
   state: () => ({
     activeCode: null,
     discountAmount: 0,
-    discountType: null, // 'fixed' | 'percent'
+    discountType: null,
     isLoading: false,
     error: null,
   }),
-  
   actions: {
     async applyPromo(code) {
       this.isLoading = true;
       this.error = null;
-      
       try {
-        // Cek dokumen di koleksi 'promos' dengan ID = KODE_PROMO
         const docRef = doc(db, "promos", code.toUpperCase());
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          
-          if (data.isActive === false) {
-            throw new Error("Yah, kode ini udah ga aktif kak 🥺");
-          }
-
+          if (data.isActive === false) throw new Error("Yah, kode ini udah ga aktif kak 🥺");
           this.activeCode = code.toUpperCase();
           this.discountAmount = data.value;
           this.discountType = data.type;
-          
-          return { success: true, message: `Hore! Kode ${code} berhasil dipakai! 🎉` };
+          return { success: true, message: `Kode ${code} berhasil dipakai! 🎉` };
         } else {
-          throw new Error("Kode promo ga ketemu nih.. coba cek lagi ya? 🤔");
+          throw new Error("Kode promo ga ketemu 🤔");
         }
       } catch (err) {
         this.error = err.message;
@@ -44,14 +36,12 @@ export const usePromoStore = defineStore('promo', {
         this.isLoading = false;
       }
     },
-
     resetPromo() {
       this.activeCode = null;
       this.discountAmount = 0;
       this.discountType = null;
     }
   },
-
   getters: {
     calculateTotal: (state) => (subtotal) => {
       if (!state.activeCode) return subtotal;
@@ -60,7 +50,6 @@ export const usePromoStore = defineStore('promo', {
       else if (state.discountType === 'percent') discount = (subtotal * state.discountAmount) / 100;
       return Math.max(0, subtotal - discount);
     },
-    
     savings: (state) => (subtotal) => {
        if (!state.activeCode) return 0;
        if (state.discountType === 'fixed') return state.discountAmount;

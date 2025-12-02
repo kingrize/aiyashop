@@ -6,7 +6,9 @@ import { useUserStore } from '../stores/user';
 import ProductCard from '../components/ProductCard.vue';
 import HeartCalculator from '../components/HeartCalculator.vue';
 import { Wind, Heart, Flame, Sparkles, Star, Moon, ShieldCheck, Smile, Calculator, X, Info, UserCheck, Wallet, Plus, Pencil, Check, Crown, TrendingUp, ChevronRight, MessageCircle, HelpCircle, ChevronDown, Lock, Clock, Gift, MapPin } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const userStore = useUserStore(); 
 const activeCategory = ref('all');
 const showCalculatorModal = ref(false);
@@ -16,7 +18,6 @@ const isEditingName = ref(false);
 const newNameInput = ref('');
 const nameInputRef = ref(null);
 
-// LOGIC MEMBER
 const memberLevel = computed(() => {
   const totalSpent = userStore.memberData?.totalTopUp || userStore.memberData?.saldo || 0;
   if (totalSpent > 1000000) return { name: 'Elder 👑', color: 'text-amber-600 bg-amber-50 border-amber-200', icon: Crown };
@@ -58,15 +59,14 @@ const saveName = async () => {
   isEditingName.value = false;
 };
 
-// UPDATE WA
+// UPDATE WA TOP UP
 const handleTopUp = () => {
   const text = `Halo Admin Aiya! 👋%0A%0ASaya member *${userStore.memberData?.displayName || 'Baru'}* (Email: ${userStore.user?.email}) mau Top Up saldo dong!`;
   window.open(`https://wa.me/6285942963323?text=${text}`, '_blank');
 };
 
 const handleJoinMember = () => {
-  const text = `Halo Admin Aiya! 👋%0A%0ASaya tertarik buat join *Member Premium AiyaShop* (25K). Info detail keuntungannya dong kak! ✨`;
-  window.open(`https://wa.me/6285942963323?text=${text}`, '_blank');
+  router.push('/join-member');
 };
 
 const categories = [
@@ -95,11 +95,11 @@ const faqs = [
 
 <template>
   <div>
-    <!-- HERO SECTION -->
+    <!-- HERO SECTION (Login & Non-Login) -->
     <section id="home" class="pt-36 pb-20 px-6 relative overflow-hidden">
       <div class="container mx-auto max-w-6xl grid md:grid-cols-2 gap-12 items-center">
+        <!-- KOLOM KIRI (TEXT) -->
         <div class="relative z-10 text-center md:text-left order-2 md:order-1">
-          
           <!-- TAMPILAN MEMBER -->
           <div v-if="userStore.user" class="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold shadow-sm transition-colors bg-white hover:scale-105 transform duration-300 cursor-default" :class="memberLevel.color">
@@ -175,11 +175,7 @@ const faqs = [
     <!-- CARA ORDER -->
     <section class="py-20 px-6 bg-white border-y border-sky-50">
       <div class="container mx-auto max-w-6xl">
-        <div class="text-center mb-12">
-          <span class="text-xs font-bold text-sky-400 uppercase tracking-wider bg-sky-50 px-3 py-1 rounded-full">Easy Peasy</span>
-          <h2 class="text-3xl md:text-4xl font-bold text-slate-700 mt-2">Cara Order di AiyaShop ✨</h2>
-          <p class="text-slate-400 mt-2 max-w-lg mx-auto">Ga perlu ribet, tinggal pilih, bayar, dan terima beres. Akun aman!</p>
-        </div>
+        <div class="text-center mb-12"><span class="text-xs font-bold text-sky-400 uppercase tracking-wider bg-sky-50 px-3 py-1 rounded-full">Easy Peasy</span><h2 class="text-3xl md:text-4xl font-bold text-slate-700 mt-2">Cara Order di AiyaShop ✨</h2><p class="text-slate-400 mt-2 max-w-lg mx-auto">Ga perlu ribet, tinggal pilih, bayar, dan terima beres. Akun aman!</p></div>
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
           <div class="hidden md:block absolute top-12 left-0 w-full h-0.5 bg-slate-100 -z-10"></div>
           <div v-for="(step, index) in steps" :key="index" class="text-center group relative">
@@ -197,38 +193,20 @@ const faqs = [
     <!-- SERVICES -->
     <section id="services" class="py-20 px-6 bg-sky-50/30">
       <div class="container mx-auto max-w-6xl">
-        <div class="text-center mb-10 relative">
-          <h2 class="text-3xl font-bold text-slate-700 mb-2">Menu Jajan Aiya</h2>
-          <p class="text-slate-400 font-medium">Mau Aiya bantuin candle run, heart, atau wing? Pilih di sini 💌</p>
-          <Star class="absolute top-0 left-1/2 -translate-x-32 -translate-y-4 text-amber-400 animate-spin-slow" :size="24" />
-        </div>
-        <div class="flex justify-center gap-3 mb-8 flex-wrap">
-          <button v-for="cat in categories" :key="cat.id" @click="activeCategory = cat.id" class="px-5 py-2.5 rounded-full text-sm font-bold transition btn-bouncy flex items-center gap-2" :class="activeCategory === cat.id ? 'bg-sky-400 text-white shadow-lg shadow-sky-200' : 'bg-white text-slate-400 border border-slate-100 hover:text-sky-400 hover:border-sky-200'"><component :is="cat.icon" :size="16" />{{ cat.label }}</button>
-        </div>
-        <div class="card-soft mb-12 flex flex-wrap items-center justify-between gap-4 p-4 text-sm text-slate-500 border border-sky-50 mx-auto max-w-4xl bg-white shadow-sm">
-          <div class="flex items-center gap-3"><div class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 shrink-0"><ShieldCheck :size="16" class="text-sky-500" /></div><p class="leading-snug">Jasa <span class="font-bold text-sky-500">Full Manual</span>, no cheat. Login aman.<br/><span class="text-xs opacity-70">Bisa request bukti screenshot 📸</span></p></div>
-          <span class="rounded-full bg-sky-50 px-4 py-1.5 font-bold text-sky-600 text-xs">💭 Wajib baca aturan order ya!</span>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20">
-          <ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" @open-calculator="showCalculatorModal = true"/>
-        </div>
+        <div class="text-center mb-10 relative"><h2 class="text-3xl font-bold text-slate-700 mb-2">Menu Jajan Aiya</h2><p class="text-slate-400 font-medium">Mau Aiya bantuin candle run, heart, atau wing? Pilih di sini 💌</p><Star class="absolute top-0 left-1/2 -translate-x-32 -translate-y-4 text-amber-400 animate-spin-slow" :size="24" /></div>
+        <div class="flex justify-center gap-3 mb-8 flex-wrap"><button v-for="cat in categories" :key="cat.id" @click="activeCategory = cat.id" class="px-5 py-2.5 rounded-full text-sm font-bold transition btn-bouncy flex items-center gap-2" :class="activeCategory === cat.id ? 'bg-sky-400 text-white shadow-lg shadow-sky-200' : 'bg-white text-slate-400 border border-slate-100 hover:text-sky-400 hover:border-sky-200'"><component :is="cat.icon" :size="16" />{{ cat.label }}</button></div>
+        <div class="card-soft mb-12 flex flex-wrap items-center justify-between gap-4 p-4 text-sm text-slate-500 border border-sky-50 mx-auto max-w-4xl bg-white shadow-sm"><div class="flex items-center gap-3"><div class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 shrink-0"><ShieldCheck :size="16" class="text-sky-500" /></div><p class="leading-snug">Jasa <span class="font-bold text-sky-500">Full Manual</span>, no cheat. Login aman.<br/><span class="text-xs opacity-70">Bisa request bukti screenshot 📸</span></p></div><span class="rounded-full bg-sky-50 px-4 py-1.5 font-bold text-sky-600 text-xs">💭 Wajib baca aturan order ya!</span></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-20"><ProductCard v-for="product in filteredProducts" :key="product.id" :product="product" @open-calculator="showCalculatorModal = true"/></div>
       </div>
     </section>
 
     <!-- FAQ -->
     <section class="py-20 px-6 bg-white">
       <div class="container mx-auto max-w-3xl">
-        <div class="text-center mb-12">
-          <div class="inline-flex items-center justify-center w-14 h-14 bg-rose-100 text-rose-500 rounded-2xl mb-4 shadow-sm rotate-3"><HelpCircle :size="28"/></div>
-          <h2 class="text-3xl font-bold text-slate-700">Punya Pertanyaan?</h2>
-          <p class="text-slate-400 mt-2">Tenang, Aiya siap jawab keraguan kamu!</p>
-        </div>
+        <div class="text-center mb-12"><div class="inline-flex items-center justify-center w-14 h-14 bg-rose-100 text-rose-500 rounded-2xl mb-4 shadow-sm rotate-3"><HelpCircle :size="28"/></div><h2 class="text-3xl font-bold text-slate-700">Punya Pertanyaan?</h2><p class="text-slate-400 mt-2">Tenang, Aiya siap jawab keraguan kamu!</p></div>
         <div class="space-y-4">
           <div v-for="(faq, i) in faqs" :key="i" class="border border-slate-100 rounded-2xl overflow-hidden transition-all duration-300" :class="activeFaqIndex === i ? 'shadow-md border-sky-100 bg-sky-50/30' : 'bg-white hover:border-sky-100'">
-            <button @click="activeFaqIndex = activeFaqIndex === i ? null : i" class="w-full flex justify-between items-center p-5 text-left font-bold text-slate-700 hover:text-sky-600 transition">
-              <span class="flex-1 pr-4">{{ faq.q }}</span>
-              <div class="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center shrink-0 transition-transform duration-300 text-sky-400" :class="{'rotate-180 bg-sky-400 text-white border-transparent': activeFaqIndex === i}"><ChevronDown :size="18"/></div>
-            </button>
+            <button @click="activeFaqIndex = activeFaqIndex === i ? null : i" class="w-full flex justify-between items-center p-5 text-left font-bold text-slate-700 hover:text-sky-600 transition"><span class="flex-1 pr-4">{{ faq.q }}</span><div class="w-8 h-8 rounded-full bg-white border border-slate-100 flex items-center justify-center shrink-0 transition-transform duration-300 text-sky-400" :class="{'rotate-180 bg-sky-400 text-white border-transparent': activeFaqIndex === i}"><ChevronDown :size="18"/></div></button>
             <div v-show="activeFaqIndex === i" class="p-5 pt-0 text-sm text-slate-500 leading-relaxed animate-in slide-in-from-top-2 duration-200">{{ faq.a }}</div>
           </div>
         </div>
@@ -240,18 +218,13 @@ const faqs = [
       </div>
     </section>
 
-    <!-- Calculator Modal & Footer -->
     <Teleport to="body">
       <transition name="fade">
         <div v-if="showCalculatorModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" @click="showCalculatorModal = false"></div>
           <div class="bg-cream w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 p-6 md:p-10 border-4 border-white">
             <button @click="showCalculatorModal = false" class="absolute top-6 right-6 p-2 bg-white rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition border border-slate-100"><X :size="24" /></button>
-            <div class="text-center mb-8">
-              <div class="inline-flex items-center gap-2 bg-white px-4 py-1.5 rounded-full text-xs font-bold text-pink-500 border border-pink-100 mb-3 shadow-sm"><Calculator :size="14" /><span>Fitur Pintar Aiya</span></div>
-              <h2 class="text-2xl md:text-3xl font-bold text-slate-700">Kalkulator Jajan Heart 💖</h2>
-              <p class="text-slate-400 mt-2 text-sm md:text-base">Hitung budget & estimasi waktu selesai biar pas!</p>
-            </div>
+            <div class="text-center mb-8"><div class="inline-flex items-center gap-2 bg-white px-4 py-1.5 rounded-full text-xs font-bold text-pink-500 border border-pink-100 mb-3 shadow-sm"><Calculator :size="14" /><span>Fitur Pintar Aiya</span></div><h2 class="text-2xl md:text-3xl font-bold text-slate-700">Kalkulator Jajan Heart 💖</h2><p class="text-slate-400 mt-2 text-sm md:text-base">Hitung budget & estimasi waktu selesai biar pas!</p></div>
             <HeartCalculator />
           </div>
         </div>
@@ -260,10 +233,7 @@ const faqs = [
 
     <footer class="border-t border-sky-100 bg-white/60 mt-0">
       <div class="mx-auto flex max-w-6xl flex-col md:flex-row items-center justify-between gap-4 px-6 py-6 text-xs text-slate-400">
-        <div class="flex flex-col items-center md:items-start gap-1">
-           <p>© {{ new Date().getFullYear() }} Aiya Sky Service. All cozy rights reserved 💗</p>
-           <div class="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"><MapPin :size="12" /><span>Manado, Sulawesi Utara</span></div>
-        </div>
+        <div class="flex flex-col items-center md:items-start gap-1"><p>© {{ new Date().getFullYear() }} Aiya Sky Service. All cozy rights reserved 💗</p><div class="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity"><MapPin :size="12" /><span>Manado, Sulawesi Utara</span></div></div>
         <!-- UPDATE WA -->
         <p class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span> <a href="https://wa.me/6285942963323" target="_blank" class="hover:text-green-600 transition">Fast response via WhatsApp ✨</a></p>
       </div>

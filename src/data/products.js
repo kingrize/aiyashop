@@ -1,11 +1,10 @@
 // LOKASI FILE: src/data/products.js
-
 export const products = [
-  // --- TRIALS (Varian) ---
+  // --- TRIALS (VARIAN) ---
   {
     id: 'trial_custom',
     name: 'Joki Trials (Pilih Sendiri)',
-    price: 3000,
+    price: 3000, 
     category: 'special',
     tag: 'Custom Trial',
     desc: 'Pilih trial yang bikin pusing aja, atau borong semua biar terima beres! Aman 100% manual.',
@@ -22,7 +21,6 @@ export const products = [
       { id: 'v_all', name: 'Bundle: All 4 Trials ✨', price: 13000 }
     ]
   },
-
   // --- CANDLE RUN ---
   {
     id: 'cr_full',
@@ -63,23 +61,21 @@ export const products = [
     color: 'bg-sky-400 text-white',
     blobColor: 'bg-sky-100'
   },
-
-  // --- HEART (DIGANTI JADI SATU KARTU SPESIAL) ---
+  // --- HEART (CALCULATOR) ---
   {
     id: 'heart_calculator',
     name: 'Custom Heart (Hitung Sendiri)',
-    price: 3000, // Harga dasar display
+    price: 3000, 
     category: 'heart',
-    tag: 'Calculator', // Tag ini nanti kita deteksi
+    tag: 'Calculator', 
     desc: 'Butuh 10, 50, atau 100 heart? Hitung budget dan bonus kamu di sini! Sesuaikan dengan slot bot.',
-    note: 'Klik Order buat buka Kalkulator.',
+    note: 'Klik Hitung untuk kalkulator.',
     eta: 'Tergantung Qty',
     iconType: 'Heart',
     color: 'bg-rose-500 text-white',
     blobColor: 'bg-rose-100',
-    isCalculator: true // FLAG PENTING: Ini pemicu modal
+    isCalculator: true 
   },
-
   // --- SPECIAL ---
   {
     id: 'eden_run',

@@ -11,31 +11,26 @@ export default {
         'sans': ['Quicksand', 'sans-serif'],
       },
       colors: {
-        // DEFINISI WARNA EXACT MATCH DENGAN shopaiya.html
         sky: {
-          light: '#E0F7FA',  // Biru muda banget (untuk blob/bg)
-          DEFAULT: '#4FC3F7', // Biru Utama (untuk tombol/icon)
+          light: '#E0F7FA',  
+          DEFAULT: '#4FC3F7',
           soft: '#81D4FA',
           pastel: '#B3E5FC',
           dark: '#0288D1'
         },
         cream: '#FDFBF7',
         gold: {
-          DEFAULT: '#FFD54F', // Kuning/Emas Lilin
+          DEFAULT: '#FFD54F',
           pastel: '#FFF59D'
         },
         heart: {
-          DEFAULT: '#FF8A80', // Merah muda Heart
+          DEFAULT: '#FF8A80',
           light: '#FFEBEE'
         },
-        // Tambahan warna semantic biar gampang
-        primary: '#4FC3F7', 
-        secondary: '#FFD54F',
       },
       borderRadius: {
         'blob': '40% 60% 70% 30% / 40% 50% 60% 50%',
       },
-      // PERBAIKAN ANIMASI
       animation: {
         'float-slow': 'float 6s ease-in-out infinite',
         'float-fast': 'float 3s ease-in-out infinite',

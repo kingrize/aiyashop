@@ -1,10 +1,12 @@
 // LOKASI FILE: src/stores/cart.js
 import { defineStore } from 'pinia';
+import { useToastStore } from './toast';
 
 export const useCartStore = defineStore('cart', {
   state: () => ({
     items: [],
     isOpen: false,
+    lastAddedTime: null,
   }),
   getters: {
     totalItems: (state) => state.items.reduce((acc, item) => acc + item.qty, 0),
@@ -12,13 +14,15 @@ export const useCartStore = defineStore('cart', {
   },
   actions: {
     addToCart(product) {
+      const toast = useToastStore();
       const existing = this.items.find(i => i.id === product.id);
       if (existing) {
         existing.qty++;
       } else {
         this.items.push({ ...product, qty: 1 });
       }
-      this.isOpen = true; // Otomatis buka keranjang
+      this.lastAddedTime = Date.now();
+      toast.showToast(`${product.name} masuk keranjang! 🛒`);
     },
     removeItem(id) {
       this.items = this.items.filter(i => i.id !== id);

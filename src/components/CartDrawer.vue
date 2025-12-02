@@ -14,7 +14,6 @@ const promoInput = ref('');
 const promoMessage = ref('');
 const selectedPayment = ref('qris'); 
 
-// State Form Auth Mini (Login Only)
 const authForm = reactive({ email: '', password: '' });
 const isAuthLoading = ref(false);
 
@@ -100,16 +99,16 @@ const handleCheckout = () => {
     message += `%0AMetode Bayar: ${paymentMethod?.label || 'QRIS'}`;
   }
   
-  // UPDATE LINK WA DISINI
+  // UPDATE LINK WA (NOMOR BARU)
   window.open(`https://wa.me/6285942963323?text=${message}`, '_blank');
 };
 </script>
 
 <template>
   <div>
-    <!-- Overlay & Container (Sama) -->
     <transition name="fade"><div v-if="store.isOpen" class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity" @click="store.toggleCart()"></div></transition>
     <div class="fixed top-0 right-0 h-full w-full md:w-[420px] bg-[#FDFBF7] z-[70] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)" :class="store.isOpen ? 'translate-x-0' : 'translate-x-full'">
+      <!-- ... (Isi Template Sama) ... -->
       <div class="h-full flex flex-col relative overflow-hidden">
         <div class="absolute top-0 right-0 w-64 h-64 bg-sky-100 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none"></div>
         <div class="p-6 flex justify-between items-center bg-white/50 backdrop-blur-md border-b border-sky-100/50">
@@ -117,7 +116,7 @@ const handleCheckout = () => {
           <button @click="store.toggleCart()" class="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-500 rounded-full transition"><X :size="24" /></button>
         </div>
 
-        <!-- Items List -->
+        <!-- Items -->
         <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           <div v-if="store.items.length === 0" class="text-center py-20 flex flex-col items-center">
             <div class="bg-sky-50 p-6 rounded-full mb-4 animate-float-slow"><Wind class="text-sky-300" :size="48" /></div>
@@ -137,7 +136,7 @@ const handleCheckout = () => {
 
         <!-- Footer -->
         <div class="bg-white border-t border-dashed border-sky-100 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
-          <!-- Promo Code -->
+          <!-- Promo -->
           <div class="px-6 pt-4 pb-2">
             <div class="flex gap-2"><div class="relative flex-1 group"><div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Tag :size="16" class="text-slate-400 group-focus-within:text-sky-500 transition" /></div><input v-model="promoInput" type="text" placeholder="Kode Promo" class="pl-9 pr-8 w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 text-sm focus:outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-50 transition uppercase font-bold text-slate-600 placeholder:font-normal" @keyup.enter="handleApplyPromo" :disabled="!!promoStore.activeCode"/><button v-if="promoStore.activeCode" @click="promoStore.resetPromo(); promoInput=''" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-rose-500 cursor-pointer transition"><XCircle :size="16" /></button></div><button @click="handleApplyPromo" :disabled="promoStore.isLoading || !promoInput || !!promoStore.activeCode" class="bg-slate-800 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-slate-200 flex items-center justify-center min-w-[70px]"><Loader2 v-if="promoStore.isLoading" :size="16" class="animate-spin" /><span v-else>{{ promoStore.activeCode ? 'Aktif' : 'Pakai' }}</span></button></div>
             <p v-if="promoMessage" class="text-[10px] mt-2 font-bold ml-1 flex items-center gap-1" :class="promoStore.error ? 'text-rose-500' : 'text-emerald-500'"><Sparkles v-if="!promoStore.error" :size="12" /> {{ promoMessage }}</p>
@@ -151,7 +150,6 @@ const handleCheckout = () => {
               <button @click="selectedPayment = 'member'" class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition whitespace-nowrap" :class="selectedPayment === 'member' ? 'bg-indigo-50 border-indigo-300 text-indigo-600 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'"><UserCheck :size="14" /> Member</button>
               <button v-for="method in paymentMethods.filter(m => m.id !== 'member')" :key="method.id" @click="selectedPayment = method.id" class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition whitespace-nowrap" :class="selectedPayment === method.id ? 'bg-sky-50 border-sky-300 text-sky-600 shadow-sm' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'"><component :is="method.icon" :size="14" /> {{ method.label }}</button>
             </div>
-            <!-- Panel Info Member (Login Only) -->
             <transition name="fade">
               <div v-if="selectedPayment === 'member'" class="mt-3 bg-indigo-50 p-3 rounded-xl border border-indigo-100 relative overflow-hidden">
                 <div v-if="userStore.user">
@@ -173,7 +171,7 @@ const handleCheckout = () => {
             </transition>
           </div>
 
-          <!-- Total -->
+          <!-- Total & Checkout -->
           <div class="p-6 pt-2 space-y-3">
             <div class="flex justify-between items-center text-xs text-slate-400"><span>Subtotal</span><span>{{ formatRupiah(store.totalPrice) }}</span></div>
             <div v-if="promoStore.activeCode && isPromoEligible" class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 p-2 rounded-lg border border-emerald-100 animate-in slide-in-from-left-2"><span class="flex items-center gap-1"><Tag :size="12"/> Hemat ({{ promoStore.activeCode }})</span><span>- {{ formatRupiah(promoStore.savings(store.totalPrice)) }}</span></div>
