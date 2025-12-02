@@ -1,6 +1,6 @@
-// LOKASI FILE: tailwind.config.js
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: [
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
@@ -16,9 +16,15 @@ export default {
           DEFAULT: '#4FC3F7',
           soft: '#81D4FA',
           pastel: '#B3E5FC',
-          dark: '#0288D1'
+          dark: '#0288D1',
         },
         cream: '#FDFBF7',
+        
+        // --- DARK MODE PALETTE (Slate Based) ---
+        charcoal: '#0f172a', // Background Utama (Slate 900)
+        graphite: '#1e293b', // Elemen/Card (Slate 800)
+        metal: '#334155',    // Border (Slate 700)
+        
         gold: {
           DEFAULT: '#FFD54F',
           pastel: '#FFF59D'

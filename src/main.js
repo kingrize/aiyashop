@@ -3,18 +3,22 @@ import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import './assets/main.css'
 import App from './App.vue'
-import router from './router' // <-- TAMBAH INI (Import Router)
+import router from './router'
 import { useUserStore } from './stores/user';
+import { useThemeStore } from './stores/theme'; // Import Theme Store
 
 const app = createApp(App)
 const pinia = createPinia();
 
 app.use(pinia);
-app.use(router); // <-- TAMBAH INI (Aktifkan Router di App)
+app.use(router);
 
-// Inisialisasi Listener Auth (Cek apakah user sedang login)
-// Note: Pastikan ini dipanggil SETELAH app.use(pinia)
+// Inisialisasi Listener Auth
 const userStore = useUserStore();
 userStore.initAuth();
+
+// Inisialisasi Tema
+const themeStore = useThemeStore();
+themeStore.initTheme();
 
 app.mount('#app')
