@@ -11,7 +11,7 @@ import { useRouter } from 'vue-router';
 // IMPORT GAMBAR ASSETS
 import skyKidGif from '../assets/skykid.gif'; 
 import skykidMoth from '../assets/moth.gif';
-
+import skyKey from '../assets/keySky.gif';
 
 const router = useRouter();
 const userStore = useUserStore(); 
@@ -189,7 +189,7 @@ const faqs = [
           <div class="flex items-center justify-center gap-2">
             <h2 class="text-3xl md:text-4xl font-bold text-slate-700 dark:text-slate-200 mt-2">Cara Order </h2>
             <!-- GIF Sky Kid Kecil -->
-            <img :src="skyKidGif" class="w-12 h-12 object-contain" />
+            <img :src="skyKey" class="w-12 h-12 object-contain" />
           </div>
           <span class="text-xs font-bold text-sky-400 uppercase tracking-wider bg-sky-50 dark:bg-graphite px-3 py-1 rounded-full inline-block mt-2">Easy Peasy</span>
           <p class="text-slate-400 mt-2 max-w-lg mx-auto">Ga perlu ribet, tinggal pilih, bayar, dan terima beres. Akun aman!</p>
