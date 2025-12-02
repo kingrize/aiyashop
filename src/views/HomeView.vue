@@ -208,7 +208,7 @@ const faqs = [
       </div>
     </section>
 
-    <!-- SERVICES SECTION (DENGAN GIF & ANIMASI) -->
+    <!-- SERVICES SECTION (DENGAN GIF & ANIMASI) @jiya.py-->
     <section id="services" class="py-20 px-6 bg-sky-50/30 dark:bg-graphite/30 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100">
       <div class="container mx-auto max-w-6xl">
         <div class="text-center mb-10 relative">
