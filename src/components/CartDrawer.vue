@@ -1,4 +1,3 @@
-<!-- LOKASI FILE: src/components/CartDrawer.vue -->
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
 import { useCartStore } from "../stores/cart";
@@ -50,7 +49,8 @@ const countdown = ref(3); // Hitung mundur
 
 // State Form Auth Mini
 const isRegisterMode = ref(false);
-const authForm = reactive({ name: "", email: "", password: "" });
+// UPDATE: Menggunakan username, bukan email
+const authForm = reactive({ name: "", username: "", password: "" });
 const isAuthLoading = ref(false);
 
 watch(
@@ -95,23 +95,27 @@ const handleApplyPromo = async () => {
 const handleAuthSubmit = async () => {
     isAuthLoading.value = true;
     if (isRegisterMode.value) {
-        if (!authForm.name || !authForm.email || !authForm.password) {
+        // Validasi Register dengan Username
+        if (!authForm.name || !authForm.username || !authForm.password) {
             alert("Isi semua data dulu ya!");
             isAuthLoading.value = false;
             return;
         }
+        // Register: Append domain dummy agar diterima Firebase Auth
         await userStore.register(
             authForm.name,
-            authForm.email,
+            authForm.username + "@aiyashop.com",
             authForm.password,
         );
     } else {
-        if (!authForm.email || !authForm.password) {
-            alert("Email & Password wajib diisi!");
+        // Validasi Login dengan Username
+        if (!authForm.username || !authForm.password) {
+            alert("Username & Password wajib diisi!");
             isAuthLoading.value = false;
             return;
         }
-        await userStore.login(authForm.email, authForm.password);
+        // Login: Store sudah menangani logika username
+        await userStore.login(authForm.username, authForm.password);
     }
     isAuthLoading.value = false;
 };
@@ -508,19 +512,31 @@ const processCheckout = (statusBayar) => {
                                     <p
                                         class="text-[10px] text-indigo-500 dark:text-indigo-300 mb-2 font-bold text-center"
                                     >
-                                        Login Member Lama 🔐
+                                        {{
+                                            isRegisterMode
+                                                ? "Daftar Member Baru ✨"
+                                                : "Login Member Lama 🔐"
+                                        }}
                                     </p>
                                     <div class="space-y-2">
                                         <input
-                                            v-model="authForm.email"
-                                            type="email"
-                                            placeholder="Email"
+                                            v-if="isRegisterMode"
+                                            v-model="authForm.name"
+                                            type="text"
+                                            placeholder="Nama Panggilan Kamu"
+                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
+                                        />
+                                        <!-- UPDATE: Input Email diubah jadi Username -->
+                                        <input
+                                            v-model="authForm.username"
+                                            type="text"
+                                            placeholder="Username"
                                             class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
                                         />
                                         <input
                                             v-model="authForm.password"
                                             type="password"
-                                            placeholder="Password"
+                                            placeholder="Password (Min. 6)"
                                             class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
                                         />
                                     </div>
@@ -531,23 +547,38 @@ const processCheckout = (statusBayar) => {
                                         <AlertCircle :size="10" />
                                         {{ userStore.authError }}
                                     </p>
-                                    <button
-                                        @click="handleAuthSubmit"
-                                        :disabled="isAuthLoading"
-                                        class="w-full mt-3 bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-1"
-                                    >
-                                        <Loader2
-                                            v-if="isAuthLoading"
-                                            :size="12"
-                                            class="animate-spin"
-                                        />
-                                        Masuk
-                                    </button>
-                                    <p
-                                        class="text-[9px] text-center text-indigo-400 mt-2"
-                                    >
-                                        *Belum punya akun? Hubungi Admin.
-                                    </p>
+                                    <div class="flex gap-2 mt-3">
+                                        <button
+                                            @click="handleAuthSubmit"
+                                            :disabled="isAuthLoading"
+                                            class="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-1"
+                                        >
+                                            <Loader2
+                                                v-if="isAuthLoading"
+                                                :size="12"
+                                                class="animate-spin"
+                                            />
+                                            {{
+                                                isRegisterMode
+                                                    ? "Daftar"
+                                                    : "Masuk"
+                                            }}
+                                        </button>
+                                        <button
+                                            @click="
+                                                isRegisterMode =
+                                                    !isRegisterMode;
+                                                userStore.authError = null;
+                                            "
+                                            class="px-3 py-1.5 bg-white dark:bg-slate-700 text-indigo-500 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-50 dark:hover:bg-slate-600"
+                                        >
+                                            {{
+                                                isRegisterMode
+                                                    ? "Punya Akun?"
+                                                    : "Daftar?"
+                                            }}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </transition>
@@ -688,7 +719,7 @@ const processCheckout = (statusBayar) => {
                 class="fixed inset-0 z-[90] flex items-center justify-center p-4"
             >
                 <div
-                    class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
+                    class="absolute inset-0 bg-emerald-900/20 backdrop-blur-sm transition-opacity"
                 ></div>
                 <div
                     class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300 p-8 text-center border-4 border-emerald-50 dark:border-emerald-900"

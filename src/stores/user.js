@@ -1,29 +1,50 @@
 // LOKASI FILE: src/stores/user.js
-import { defineStore } from 'pinia';
-import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { defineStore } from "pinia";
+import { auth, db } from "../firebase";
+import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
-export const useUserStore = defineStore('user', {
+export const useUserStore = defineStore("user", {
   state: () => ({
     user: null,
     memberData: null,
     loading: true,
     authError: null,
   }),
+
   actions: {
-    async login(email, password) {
+    // --- LOGIN DENGAN USERNAME ---
+    // Input: "arya" -> Diproses jadi "arya@aiyashop.com"
+    async login(username, password) {
       this.authError = null;
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        // Auto-append domain jika user tidak memasukkan email lengkap
+        const email = username.includes("@")
+          ? username
+          : `${username}@aiyashop.com`;
+
+        const userCredential = await signInWithEmailAndPassword(
+          auth,
+          email,
+          password,
+        );
         this.user = userCredential.user;
         await this.fetchMemberData();
         return true;
       } catch (error) {
+        console.error("Login Error:", error);
         this.authError = this.mapErrorMessage(error.code);
         return false;
       }
     },
+
+    // ... (Sisa fungsi register, logout, fetchMemberData sama persis seperti file sebelumnya) ...
+    // Pastikan copy semua fungsi lainnya juga
     async logout() {
       await signOut(auth);
       this.user = null;
@@ -31,7 +52,7 @@ export const useUserStore = defineStore('user', {
     },
     async fetchMemberData() {
       if (!this.user) return;
-      const docRef = doc(db, 'users', this.user.uid);
+      const docRef = doc(db, "users", this.user.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const data = docSnap.data();
@@ -39,19 +60,22 @@ export const useUserStore = defineStore('user', {
         this.memberData = data;
       } else {
         // Auto-fix user manual
-        const tempName = this.user.email.split('@')[0];
-        const formattedName = tempName.charAt(0).toUpperCase() + tempName.slice(1);
+        const tempName = this.user.email.split("@")[0];
+        const formattedName =
+          tempName.charAt(0).toUpperCase() + tempName.slice(1);
         const newMemberData = {
           email: this.user.email,
           displayName: formattedName,
           saldo: 0,
           totalTopUp: 0,
-          role: 'member',
+          role: "member",
           joinedAt: new Date(),
-          isManualEntry: true
+          isManualEntry: true,
         };
         await setDoc(docRef, newMemberData);
-        try { await updateProfile(this.user, { displayName: formattedName }); } catch (e) {}
+        try {
+          await updateProfile(this.user, { displayName: formattedName });
+        } catch (e) {}
         this.memberData = newMemberData;
       }
     },
@@ -59,12 +83,14 @@ export const useUserStore = defineStore('user', {
       if (!this.user || !this.memberData) return;
       try {
         await updateProfile(this.user, { displayName: newName });
-        const userRef = doc(db, 'users', this.user.uid);
+        const userRef = doc(db, "users", this.user.uid);
         await updateDoc(userRef, { displayName: newName });
         this.user = { ...this.user, displayName: newName };
         this.memberData.displayName = newName;
         return true;
-      } catch (error) { return false; }
+      } catch (error) {
+        return false;
+      }
     },
     initAuth() {
       onAuthStateChanged(auth, async (user) => {
@@ -75,12 +101,17 @@ export const useUserStore = defineStore('user', {
     },
     mapErrorMessage(code) {
       switch (code) {
-        case 'auth/user-not-found': return 'Akun tidak ditemukan. Hubungi admin.';
-        case 'auth/wrong-password': return 'Password salah.';
-        case 'auth/invalid-credential': return 'Email atau password salah.';
-        case 'auth/too-many-requests': return 'Terlalu banyak mencoba, tunggu sebentar.';
-        default: return 'Gagal masuk.';
+        case "auth/user-not-found":
+          return "Username tidak ditemukan. Hubungi admin.";
+        case "auth/wrong-password":
+          return "Password salah.";
+        case "auth/invalid-credential":
+          return "Username atau password salah.";
+        case "auth/too-many-requests":
+          return "Terlalu banyak mencoba, tunggu sebentar.";
+        default:
+          return "Gagal masuk.";
       }
-    }
-  }
+    },
+  },
 });
