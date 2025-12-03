@@ -397,12 +397,6 @@ const faqs = [
                                 Aiya, Bantuin Dong!
                                 <Star :size="16" class="text-amber-200" />
                             </button>
-                            <button
-                                @click="scrollToServices"
-                                class="btn-bouncy w-full sm:w-auto px-6 py-3.5 bg-white dark:bg-graphite text-slate-600 dark:text-slate-300 border-2 border-slate-100 dark:border-metal rounded-2xl font-bold hover:bg-slate-50 dark:hover:bg-metal/50 hover:border-sky-200 transition"
-                            >
-                                Lihat Menu
-                            </button>
                         </div>
                         <div
                             @click="handleJoinMember"
@@ -475,7 +469,7 @@ const faqs = [
                             />
                         </div>
                         <div
-                            class="absolute bottom-10 right-0 bg-white/90 dark:bg-graphite/90 backdrop-blur px-4 py-2 rounded-xl shadow-sm border border-sky-100 dark:border-metal text-xs font-bold text-sky-500 dark:text-sky-400 animate-float-slow"
+                            class="absolute bottom-10 right-0 bg-white/90 dark:bg-graphite/90 backdrop-blur px-4 py-2 rounded-xl shadow-sm border border-sky-100 dark:border-metal text-xs font-bold text-sky-500 dark:text-sky-400 animate-float-slow z-50"
                             style="animation-delay: 2s"
                         >
                             ✨ Open 10.00 - 23.00 WIB
