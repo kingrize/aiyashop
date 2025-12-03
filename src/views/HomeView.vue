@@ -394,7 +394,7 @@ const faqs = [
                                 @click="scrollToServices"
                                 class="btn-bouncy px-8 py-3.5 bg-sky-400 hover:bg-sky-500 text-white rounded-2xl font-bold shadow-lg shadow-sky-200 flex items-center justify-center gap-2"
                             >
-                                Aiya, Bantuin Dong!
+                                Liat menu joki Aiya
                                 <Star :size="16" class="text-amber-200" />
                             </button>
                         </div>

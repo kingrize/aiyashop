@@ -1,52 +1,81 @@
-@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  body {
-    @apply bg-cream text-slate-600 antialiased selection:bg-sky-200 selection:text-sky-800 font-sans transition-colors duration-300;
-    
-    min-height: 100vh;
-    background-attachment: fixed; 
-    
-    /* Light Mode Pattern */
-    background-image: 
-      radial-gradient(rgba(79, 195, 247, 0.15) 1.5px, transparent 1.5px), 
-      radial-gradient(rgba(79, 195, 247, 0.1) 1.5px, #FDFBF7 1.5px);
-    background-size: 24px 24px;
-    background-position: 0 0, 12px 12px;
-  }
+    body {
+        @apply bg-cream text-slate-600 antialiased selection:bg-sky-200 selection:text-sky-800 font-sans transition-colors duration-300;
 
-  /* Dark Mode Pattern (Menggunakan charcoal) */
-  .dark body {
-    @apply bg-charcoal text-slate-300 selection:bg-indigo-500 selection:text-white;
-    
-    background-image: 
-      radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px), 
-      radial-gradient(rgba(255, 255, 255, 0.02) 1.5px, #0f172a 1.5px);
-  }
+        min-height: 100vh;
+        background-attachment: fixed;
+
+        /* Light Mode Pattern */
+        background-image:
+            radial-gradient(rgba(79, 195, 247, 0.15) 1.5px, transparent 1.5px),
+            radial-gradient(rgba(79, 195, 247, 0.1) 1.5px, #fdfbf7 1.5px);
+        background-size: 24px 24px;
+        background-position:
+            0 0,
+            12px 12px;
+    }
+
+    /* Dark Mode Pattern (Menggunakan charcoal) */
+    .dark body {
+        @apply bg-charcoal text-slate-300 selection:bg-indigo-500 selection:text-white;
+
+        background-image:
+            radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px),
+            radial-gradient(rgba(255, 255, 255, 0.02) 1.5px, #0f172a 1.5px);
+    }
 }
 
 @layer components {
-  .card-soft {
-    /* Light: Glass Putih */
-    @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] rounded-[2rem] transition-colors duration-300;
-  }
-  
-  /* Dark: Glass Graphite (Solid tapi agak transparan) */
-  .dark .card-soft {
-    @apply bg-graphite/90 border-white/5 shadow-none text-slate-200;
-  }
+    .card-soft {
+        /* Light: Glass Putih */
+        @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] rounded-[2rem] transition-colors duration-300;
+    }
 
-  .btn-bouncy {
-    @apply transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:scale-95 hover:-translate-y-0.5;
-  }
+    /* Dark: Glass Graphite (Solid tapi agak transparan) */
+    .dark .card-soft {
+        @apply bg-graphite/90 border-white/5 shadow-none text-slate-200;
+    }
 
-  input[type=range] {
-    -webkit-appearance: none;
-    appearance: none;
-    background: transparent; 
-  }
+    .btn-bouncy {
+        @apply transition-all duration-300 ease-[cubic-bezier(0.175,0.885,0.32,1.275)] active:scale-95 hover:-translate-y-0.5;
+    }
+
+    /* Disable glows / heavy box-shadows globally in dark mode to remove button glow effects.
+     This targets common Tailwind shadow utilities and the project's bouncy button helper.
+     Focus outlines remain to preserve keyboard accessibility. */
+    .dark button,
+    .dark .btn-bouncy,
+    .dark .shadow,
+    .dark .shadow-sm,
+    .dark .shadow-md,
+    .dark .shadow-lg,
+    .dark .shadow-xl,
+    .dark .shadow-2xl,
+    .dark .shadow-indigo-200,
+    .dark .shadow-emerald-100 {
+        box-shadow: none !important;
+        filter: none !important;
+    }
+
+    /* Keep accessible focus outlines (subtle) in dark mode so keyboard navigation remains visible */
+    .dark button:focus,
+    .dark a:focus,
+    .dark input:focus,
+    .dark textarea:focus {
+        box-shadow: none !important;
+        outline: 2px solid rgba(255, 255, 255, 0.06);
+        outline-offset: 2px;
+    }
+
+    input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+    }
 }
