@@ -38,7 +38,6 @@ import { useRouter } from "vue-router";
 // IMPORT GAMBAR ASSETS
 import skyKidGif from "../assets/skykid.gif";
 import skykidMoth from "../assets/moth.gif";
-import skyKey from "../assets/keySky.gif";
 
 const router = useRouter();
 const userStore = useUserStore();
