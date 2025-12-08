@@ -1,327 +1,244 @@
 <script setup>
-import { computed, ref } from 'vue';
-import { Heart, Minus, Plus, Users, Clock } from 'lucide-vue-next';
+import { computed, ref } from "vue";
+import { Heart, Minus, Plus, Users, Clock, Zap, Gift } from "lucide-vue-next";
 
 const props = defineProps({
-  product: {
-    type: Object,
-    required: true
-  }
+    product: {
+        type: Object,
+        required: true,
+    },
 });
 
-const emit = defineEmits(['addToCart']);
+const emit = defineEmits(["addToCart"]);
 
-/* CONFIG (boleh di-override lewat product) */
+/* CONFIG */
 const minHearts = computed(() => props.product.minHearts ?? 10);
-const maxHearts = computed(() => props.product.maxHearts ?? null); // null = no limit
+const maxHearts = computed(() => props.product.maxHearts ?? 1000);
 const heartCount = ref(props.product.defaultHearts ?? 30);
 
 const minSlots = computed(() => props.product.minSlots ?? 1);
-const maxSlots = computed(() => props.product.maxSlots ?? 10);
+const maxSlots = computed(() => props.product.maxSlots ?? 15);
 const slots = ref(props.product.defaultSlots ?? 5);
 
-const pricePerHeart = computed(() => props.product.pricePerHeart ?? 100);
+const pricePerHeart = computed(() => props.product.pricePerHeart ?? 3000); // Default fallback price
 
 const formatCurrency = (value) =>
-  new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    maximumFractionDigits: 0
-  }).format(value || 0);
+    new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(value || 0);
 
-// BONUS: tiap 50 heart → +5 heart
+// BONUS: Tiap 50 heart -> +5 heart
 const bonusHearts = computed(() => {
-  if (heartCount.value <= 0) return 0;
-  const paket50 = Math.floor(heartCount.value / 50);
-  return paket50 * 5;
+    if (heartCount.value <= 0) return 0;
+    const paket50 = Math.floor(heartCount.value / 50);
+    return paket50 * 5;
 });
 
 const totalHeartsWithBonus = computed(
-  () => heartCount.value + bonusHearts.value
+    () => heartCount.value + bonusHearts.value,
 );
-
 const totalPrice = computed(() => heartCount.value * pricePerHeart.value);
 
-// estimasi hari (pakai total heart termasuk bonus)
+// Estimasi hari
 const estimatedDays = computed(() => {
-  if (!slots.value) return 0;
-  return Math.ceil(totalHeartsWithBonus.value / slots.value);
+    if (!slots.value) return 0;
+    return Math.ceil(totalHeartsWithBonus.value / slots.value);
 });
 
-const heartsPerDay = computed(() => slots.value);
-
-/* HEART CONTROL */
+/* ACTIONS */
 const decreaseHearts = () => {
-  let next = heartCount.value - 1;
-  if (next < minHearts.value) next = minHearts.value;
-  heartCount.value = next;
+    if (heartCount.value > minHearts.value) heartCount.value--;
 };
-
 const increaseHearts = () => {
-  let next = heartCount.value + 1;
-  if (maxHearts.value != null && next > maxHearts.value) next = maxHearts.value;
-  heartCount.value = next;
+    if (heartCount.value < maxHearts.value) heartCount.value++;
+};
+const handleHeartInput = (e) => {
+    let val = parseInt(e.target.value);
+    if (isNaN(val)) val = minHearts.value;
+    if (val < minHearts.value) val = minHearts.value;
+    if (val > maxHearts.value) val = maxHearts.value;
+    heartCount.value = val;
 };
 
-const handleHeartInput = (event) => {
-  let value = Math.floor(Number(event.target.value || 0));
-  if (Number.isNaN(value)) return;
-  if (value < minHearts.value) value = minHearts.value;
-  if (maxHearts.value != null && value > maxHearts.value) value = maxHearts.value;
-  heartCount.value = value;
-};
+const presets = [10, 20, 30, 50, 100, 200];
 
-/* SLOTS CONTROL */
-const decreaseSlots = () => {
-  let next = slots.value - 1;
-  if (next < minSlots.value) next = minSlots.value;
-  slots.value = next;
-};
-
-const increaseSlots = () => {
-  let next = slots.value + 1;
-  if (next > maxSlots.value) next = maxSlots.value;
-  slots.value = next;
-};
-
-const handleSlotInput = (event) => {
-  let value = Math.floor(Number(event.target.value || 0));
-  if (Number.isNaN(value)) return;
-  if (value < minSlots.value) value = minSlots.value;
-  if (value > maxSlots.value) value = maxSlots.value;
-  slots.value = value;
-};
-
-/* PRESET */
-const presets = computed(() => {
-  const arr = [10, 20, 30, 50, 100, 150, 200];
-  return arr.filter((v) =>
-    maxHearts.value != null ? v >= minHearts.value && v <= maxHearts.value : v >= minHearts.value
-  );
-});
-
-const handlePresetClick = (value) => {
-  heartCount.value = value;
-};
-
-/* ADD TO CART */
 const handleAddToCart = () => {
-  const item = {
-    ...props.product,
-    id: `${props.product.id || props.product.slug || props.product.name}-heart-${heartCount.value}`,
-    name:
-      bonusHearts.value > 0
-        ? `${props.product.name} (${heartCount.value} Heart + ${bonusHearts.value} Bonus)`
-        : `${props.product.name} (${heartCount.value} Heart)`,
-    price: totalPrice.value,
-    heartCountPaid: heartCount.value,
-    heartBonus: bonusHearts.value,
-    heartTotal: totalHeartsWithBonus.value,
-    slots: slots.value,
-    estimatedDays: estimatedDays.value
-  };
-
-  emit('addToCart', item);
+    emit("addToCart", {
+        ...props.product,
+        id: `${props.product.id}-custom-${Date.now()}`,
+        name:
+            bonusHearts.value > 0
+                ? `Custom Heart (${heartCount.value} + ${bonusHearts.value} Bonus)`
+                : `Custom Heart (${heartCount.value})`,
+        price: totalPrice.value,
+        qty: 1,
+        desc: `Total: ${totalHeartsWithBonus.value} Heart • Via ${slots.value} Bot • Est. ${estimatedDays.value} Hari`,
+        selectedVariants: [
+            { name: "Jumlah Heart", value: heartCount.value },
+            { name: "Slot Bot", value: slots.value },
+        ],
+    });
 };
 </script>
 
 <template>
-  <section
-    class="flex flex-col rounded-2xl bg-white/85 px-4 py-4 backdrop-blur-sm shadow-inner shadow-rose-100/60
-           dark:bg-rose-950/40 dark:shadow-none"
-  >
-    <!-- HEADER MINI -->
-    <header class="flex items-start justify-between gap-3 mb-3">
-      <div class="flex items-center gap-3">
+    <div class="flex flex-col h-full gap-5 pb-1">
+        <div class="space-y-3">
+            <div class="flex justify-between items-end">
+                <label
+                    class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                >
+                    Mau beli berapa?
+                </label>
+                <transition name="scale">
+                    <span
+                        v-if="bonusHearts > 0"
+                        class="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-400 px-2 py-0.5 rounded-full animate-pulse"
+                    >
+                        <Gift :size="10" /> +{{ bonusHearts }} Bonus
+                    </span>
+                </transition>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button
+                    @click="decreaseHearts"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-500 hover:border-rose-300 transition active:scale-95"
+                >
+                    <Minus :size="16" />
+                </button>
+
+                <div class="flex-1 relative">
+                    <input
+                        type="number"
+                        v-model="heartCount"
+                        @change="handleHeartInput"
+                        class="w-full h-10 text-center font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 dark:focus:ring-rose-900 transition"
+                    />
+                    <div
+                        class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                    >
+                        <Heart
+                            :size="14"
+                            class="text-rose-400 fill-rose-400/20"
+                        />
+                    </div>
+                </div>
+
+                <button
+                    @click="increaseHearts"
+                    class="w-10 h-10 flex items-center justify-center rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-rose-500 hover:border-rose-300 transition active:scale-95"
+                >
+                    <Plus :size="16" />
+                </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2">
+                <button
+                    v-for="p in presets"
+                    :key="p"
+                    @click="heartCount = p"
+                    class="px-3 py-1 text-[10px] font-bold rounded-lg border transition-all duration-200"
+                    :class="
+                        heartCount === p
+                            ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-200 dark:shadow-none'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:border-rose-300 hover:text-rose-500'
+                    "
+                >
+                    {{ p }}
+                </button>
+            </div>
+        </div>
+
         <div
-          class="flex h-9 w-9 aspect-square items-center justify-center rounded-[16px]
-                 bg-gradient-to-br from-rose-400 via-rose-500 to-rose-600 text-white shadow-md shadow-rose-400/60"
+            class="space-y-3 pt-2 border-t border-dashed border-slate-200 dark:border-slate-700"
         >
-          <Heart class="w-4 h-4" />
-        </div>
+            <div class="flex justify-between items-center">
+                <label
+                    class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5"
+                >
+                    <Users :size="12" /> Slot Bot Kamu
+                </label>
+                <span
+                    class="text-xs font-bold text-rose-500 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-0.5 rounded-md"
+                >
+                    {{ slots }} Akun
+                </span>
+            </div>
 
-        <div class="leading-tight">
-          <p class="text-sm font-semibold text-rose-600 dark:text-rose-200">
-            Custom Heart Calculator
-          </p>
-          <p class="text-[11px] text-slate-600 dark:text-slate-300">
-            1 Heart = {{ formatCurrency(pricePerHeart) }} • Bonus tiap 50 ❤️
-          </p>
-        </div>
-      </div>
-    </header>
-
-    <div class="space-y-3.5 text-[13px]">
-      <!-- JUMLAH HEART -->
-      <div
-        class="rounded-xl border border-rose-100 bg-white/85 px-3.5 py-3
-               dark:border-rose-500/40 dark:bg-rose-950/60"
-      >
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-200 tracking-[0.12em] uppercase">
-            Jumlah Heart
-          </span>
-          <span class="text-[11px] text-rose-400 dark:text-rose-200">
-            Min {{ minHearts }}
-            <span v-if="maxHearts !== null"> • Max {{ maxHearts }}</span>
-          </span>
-        </div>
-
-        <div class="mt-2.5 flex items-center gap-3">
-          <button
-            @click="decreaseHearts"
-            class="flex h-9 w-9 aspect-square items-center justify-center rounded-full border border-rose-100 bg-white text-rose-400 hover:bg-rose-50 active:scale-95 transition dark:border-rose-500/40 dark:bg-rose-950 dark:hover:bg-rose-900"
-          >
-            <Minus class="w-4 h-4" />
-          </button>
-
-          <div
-            class="flex-1 rounded-full border border-rose-100 bg-white/80 px-3 py-1.5 text-center text-sm font-semibold text-slate-700 dark:border-rose-500/40 dark:bg-rose-950/80 dark:text-rose-50"
-          >
             <input
-              type="number"
-              :value="heartCount"
-              @input="handleHeartInput"
-              class="w-full bg-transparent text-center outline-none text-sm font-semibold"
+                type="range"
+                v-model.number="slots"
+                :min="minSlots"
+                :max="maxSlots"
+                class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-rose-500 hover:accent-rose-400 transition-all"
             />
-          </div>
 
-          <button
-            @click="increaseHearts"
-            class="flex h-9 w-9 aspect-square items-center justify-center rounded-full border border-rose-100 bg-white text-rose-400 hover:bg-rose-50 active:scale-95 transition dark:border-rose-500/40 dark:bg-rose-950 dark:hover:bg-rose-900"
-          >
-            <Plus class="w-4 h-4" />
-          </button>
+            <div
+                class="flex justify-between text-[10px] text-slate-400 font-medium"
+            >
+                <span>Lambat ({{ minSlots }})</span>
+                <span class="text-rose-400/80"
+                    >Semakin banyak, semakin cepat selesai ⚡</span
+                >
+                <span>Ngebut ({{ maxSlots }})</span>
+            </div>
         </div>
 
-        <!-- BONUS INFO -->
-        <p class="mt-1.5 text-[11px] text-rose-500 dark:text-rose-200">
-          Bonus: setiap 50 heart → <strong>+5 heart</strong>
-        </p>
-        <p
-          v-if="bonusHearts > 0"
-          class="mt-0.5 text-[11px] text-slate-600 dark:text-slate-200"
+        <div
+            class="mt-auto bg-gradient-to-br from-rose-50 to-white dark:from-slate-800 dark:to-slate-800/50 rounded-2xl p-4 border border-rose-100 dark:border-rose-900/30 shadow-sm"
         >
-          Kamu bayar <strong>{{ heartCount }}</strong> → menerima
-          <strong>{{ totalHeartsWithBonus }}</strong> (termasuk {{ bonusHearts }} bonus)
-        </p>
-      </div>
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <p
+                        class="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-0.5"
+                    >
+                        Total Bayar
+                    </p>
+                    <p
+                        class="text-xl font-extrabold text-slate-800 dark:text-white"
+                    >
+                        {{ formatCurrency(totalPrice) }}
+                    </p>
+                </div>
+                <div class="text-right">
+                    <div
+                        class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-700 px-2 py-1 rounded-lg border border-slate-100 dark:border-slate-600 shadow-sm"
+                    >
+                        <Clock :size="12" class="text-rose-500" />
+                        <span
+                            class="text-xs font-bold text-slate-600 dark:text-slate-200"
+                            >{{ estimatedDays }} Hari</span
+                        >
+                    </div>
+                </div>
+            </div>
 
-      <!-- SLOT BOT -->
-      <div
-        class="rounded-xl border border-rose-100 bg-white/85 px-3.5 py-3
-               dark:border-rose-500/40 dark:bg-rose-950/60"
-      >
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-200 tracking-[0.12em] uppercase">
-            Slot Bot (Akun Admin)
-          </span>
-          <span class="text-[11px] text-rose-400 dark:text-rose-200">
-            {{ minSlots }}–{{ maxSlots }} akun
-          </span>
+            <button
+                @click="handleAddToCart"
+                class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold shadow-lg shadow-rose-200 dark:shadow-none hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 group"
+            >
+                <Heart
+                    :size="16"
+                    class="fill-white/20 group-hover:fill-white/40 transition-colors"
+                />
+                Masukkan Keranjang
+            </button>
         </div>
-
-        <div class="mt-2.5 flex items-center gap-3">
-          <button
-            @click="decreaseSlots"
-            class="flex h-9 w-9 aspect-square items-center justify-center rounded-full border border-rose-100 bg-white text-rose-400 hover:bg-rose-50 active:scale-95 transition dark:border-rose-500/40 dark:bg-rose-950 dark:hover:bg-rose-900"
-          >
-            <Minus class="w-4 h-4" />
-          </button>
-
-          <div
-            class="flex-1 rounded-full border border-rose-100 bg-white/80 px-3 py-1.5 text-center text-sm font-semibold text-slate-700 dark:border-rose-500/40 dark:bg-rose-950/80 dark:text-rose-50"
-          >
-            <input
-              type="number"
-              :value="slots"
-              @input="handleSlotInput"
-              class="w-full bg-transparent text-center outline-none text-sm font-semibold"
-            />
-          </div>
-
-          <button
-            @click="increaseSlots"
-            class="flex h-9 w-9 aspect-square items-center justify-center rounded-full border border-rose-100 bg-white text-rose-400 hover:bg-rose-50 active:scale-95 transition dark:border-rose-500/40 dark:bg-rose-950 dark:hover:bg-rose-900"
-          >
-            <Plus class="w-4 h-4" />
-          </button>
-        </div>
-
-        <p class="mt-1.5 flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-          <Users class="w-3.5 h-3.5" />
-          <span>
-            Perkiraan kirim ±<strong>{{ heartsPerDay }}</strong> heart/hari
-            ({{ slots }} akun × 1 heart)
-          </span>
-        </p>
-      </div>
-
-      <!-- QUICK SELECT -->
-      <div v-if="presets.length" class="space-y-1">
-        <p class="text-[11px] text-slate-500 dark:text-slate-300">Quick select:</p>
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            v-for="preset in presets"
-            :key="preset"
-            @click="handlePresetClick(preset)"
-            class="inline-flex items-center justify-center rounded-full border px-2.5 py-1.5 text-[11px] font-medium border-rose-100 bg-white/80 text-slate-500 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-500 transition dark:border-rose-500/40 dark:bg-rose-950/70 dark:text-rose-100 dark:hover:border-rose-400 dark:hover:bg-rose-900/80"
-            :class="preset === heartCount
-              ? 'border-rose-400 bg-rose-50 text-rose-600 dark:bg-rose-900/80 dark:text-rose-100'
-              : ''"
-          >
-            {{ preset }} Heart
-          </button>
-        </div>
-      </div>
-
-      <!-- ESTIMASI -->
-      <div
-        class="rounded-xl border border-rose-100 bg-white/90 px-3.5 py-3 text-[13px]
-               dark:border-rose-500/40 dark:bg-rose-950/70"
-      >
-        <div class="flex items-center justify-between">
-          <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-200 tracking-[0.12em] uppercase">
-            Estimasi Biaya
-          </span>
-          <span class="text-[11px] text-slate-400 dark:text-slate-300">
-            {{ heartCount }} × {{ formatCurrency(pricePerHeart) }}
-          </span>
-        </div>
-
-        <p class="mt-1.5 text-sm font-semibold text-slate-900 dark:text-rose-50">
-          {{ formatCurrency(totalPrice) }}
-        </p>
-
-        <p class="mt-2 flex items-center gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
-          <Clock class="w-3.5 h-3.5" />
-          <span>
-            Estimasi selesai ± <strong>{{ estimatedDays }}</strong> hari
-            (total kirim <strong>{{ totalHeartsWithBonus }}</strong> heart)
-          </span>
-        </p>
-      </div>
     </div>
-
-    <!-- TOMBOL -->
-    <div class="mt-4 flex justify-end">
-      <button
-        @click="handleAddToCart"
-        class="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-400 via-rose-500 to-rose-500 px-6 py-2.5 text-xs font-semibold text-white shadow-md shadow-rose-300/70 hover:brightness-110 active:scale-95 transition"
-      >
-        <Heart class="w-3.5 h-3.5" />
-        Tambah ke Keranjang
-      </button>
-    </div>
-  </section>
 </template>
 
 <style scoped>
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
+/* Transisi untuk badge bonus */
+.scale-enter-active,
+.scale-leave-active {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: #fecaca;
-  border-radius: 9999px;
+.scale-enter-from,
+.scale-leave-to {
+    opacity: 0;
+    transform: scale(0.8);
 }
 </style>

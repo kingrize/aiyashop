@@ -1,4 +1,3 @@
-<!-- LOKASI FILE: src/views/JoinMemberView.vue -->
 <script setup>
 import {
     Check,
@@ -42,74 +41,107 @@ const handleJoin = () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-cream dark:bg-charcoal pt-28 pb-20 px-6">
+    <div
+        class="min-h-screen bg-cream dark:bg-charcoal pt-28 pb-20 px-6 transition-colors duration-300"
+    >
         <div class="max-w-4xl mx-auto">
             <button
                 @click="router.push('/')"
-                class="flex items-center gap-2 text-slate-400 hover:text-sky-500 transition mb-8 font-bold text-sm"
+                class="flex items-center gap-2 text-slate-400 hover:text-sky-500 dark:text-slate-300 dark:hover:text-sky-400 transition mb-8 font-bold text-sm"
             >
                 <ChevronLeft :size="18" /> Kembali ke Home
             </button>
+
             <div class="grid md:grid-cols-2 gap-12 items-center">
                 <div class="relative order-2 md:order-1">
                     <div
-                        class="absolute inset-0 bg-gradient-to-tr from-indigo-200 to-purple-200 rounded-[2.5rem] rotate-3 blur-sm transform scale-105"
+                        class="absolute inset-0 bg-gradient-to-tr from-indigo-200 to-purple-200 dark:from-indigo-900/40 dark:to-purple-900/40 rounded-[2.5rem] rotate-3 blur-sm transform scale-105"
                     ></div>
+
                     <div
-                        class="relative bg-white rounded-[2rem] p-8 shadow-xl border border-slate-100 overflow-hidden text-center"
+                        class="relative bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-xl dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden text-center transition-colors duration-300"
                     >
                         <div
                             class="w-24 h-24 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mx-auto flex items-center justify-center shadow-lg mb-6"
                         >
                             <Crown :size="48" class="text-white" />
                         </div>
-                        <h3 class="text-2xl font-bold text-slate-800 mb-2">
+
+                        <h3
+                            class="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-2"
+                        >
                             Member Premium
                         </h3>
-                        <p class="text-slate-400 text-sm mb-8">
+                        <p
+                            class="text-slate-400 dark:text-slate-400 text-sm mb-8"
+                        >
                             Akses eksklusif seumur hidup
                         </p>
+
                         <div
                             class="flex items-center justify-center gap-2 mb-2"
                         >
-                            <span class="text-sm text-slate-400 line-through"
-                                >Rp 50.000</span
-                            ><span
-                                class="bg-rose-100 text-rose-500 text-xs font-bold px-2 py-1 rounded-lg"
-                                >DISKON 50%</span
+                            <span
+                                class="text-sm text-slate-400 dark:text-slate-500 line-through"
                             >
+                                Rp 50.000
+                            </span>
+                            <span
+                                class="bg-rose-100 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300 text-xs font-bold px-2 py-1 rounded-lg border border-transparent dark:border-rose-500/20"
+                            >
+                                DISKON 50%
+                            </span>
                         </div>
-                        <p class="text-5xl font-extrabold text-indigo-600 mb-8">
-                            25<span class="text-2xl text-slate-500">k</span>
+
+                        <p
+                            class="text-5xl font-extrabold text-indigo-600 dark:text-indigo-400 mb-8"
+                        >
+                            25<span
+                                class="text-2xl text-slate-500 dark:text-slate-300"
+                                >k</span
+                            >
                         </p>
+
                         <button
                             @click="handleJoin"
-                            class="w-full btn-bouncy bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-700 flex items-center justify-center gap-2"
+                            class="w-full btn-bouncy bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all"
                         >
                             <MessageCircle :size="20" /> Join Sekarang
                         </button>
-                        <p class="text-[10px] text-slate-400 mt-4">
+
+                        <p
+                            class="text-[10px] text-slate-400 dark:text-slate-500 mt-4"
+                        >
                             *Bayar sekali, aktif selamanya
                         </p>
                     </div>
                 </div>
+
                 <div class="order-1 md:order-2">
                     <span
-                        class="text-indigo-500 font-bold tracking-wider text-xs uppercase bg-indigo-50 px-3 py-1 rounded-full"
-                        >Membership</span
+                        class="text-indigo-500 dark:text-indigo-300 font-bold tracking-wider text-xs uppercase bg-indigo-50 dark:bg-indigo-500/10 border border-transparent dark:border-indigo-500/20 px-3 py-1 rounded-full"
                     >
+                        Membership
+                    </span>
+
                     <h1
-                        class="text-4xl md:text-5xl font-bold text-slate-800 mt-4 mb-6 leading-tight"
+                        class="text-4xl md:text-5xl font-bold text-slate-800 dark:text-slate-100 mt-4 mb-6 leading-tight"
                     >
-                        Level Up Pengalaman <br /><span
-                            class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500"
-                            >Nge-Sky Kamu!</span
+                        Level Up Pengalaman <br />
+                        <span
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400"
                         >
+                            Nge-Sky Kamu!
+                        </span>
                     </h1>
-                    <p class="text-slate-500 text-lg mb-10 leading-relaxed">
+
+                    <p
+                        class="text-slate-500 dark:text-slate-400 text-lg mb-10 leading-relaxed"
+                    >
                         Gabung jadi keluarga AiyaShop dan nikmati kemudahan joki
                         tanpa ribet, lebih hemat, dan lebih prioritas.
                     </p>
+
                     <div class="space-y-6">
                         <div
                             v-for="(benefit, index) in benefits"
@@ -117,15 +149,22 @@ const handleJoin = () => {
                             class="flex gap-4"
                         >
                             <div
-                                class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center shrink-0 mt-1"
+                                class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0 mt-1"
                             >
-                                <Check :size="16" class="text-indigo-600" />
+                                <Check
+                                    :size="16"
+                                    class="text-indigo-600 dark:text-indigo-300"
+                                />
                             </div>
                             <div>
-                                <h4 class="font-bold text-slate-700">
+                                <h4
+                                    class="font-bold text-slate-700 dark:text-slate-200"
+                                >
                                     {{ benefit.title }}
                                 </h4>
-                                <p class="text-sm text-slate-500">
+                                <p
+                                    class="text-sm text-slate-500 dark:text-slate-400"
+                                >
                                     {{ benefit.desc }}
                                 </p>
                             </div>

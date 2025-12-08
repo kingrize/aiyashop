@@ -23,8 +23,26 @@ export const products = [
   },
   // --- CANDLE RUN ---
   {
+    id: 'cr_custom',
+    name: 'Candle Run',
+    price: 5000, 
+    category: 'special',
+    tag: 'Custom Trial',
+    desc: 'Pilih trial yang bikin pusing aja, atau borong semua biar terima beres! Aman 100% manual.',
+    note: 'Klik "Pilih Opsi" buat centang trial.',
+    eta: '15-20 Menit/Trial',
+    iconType: 'Cloud',
+    color: 'bg-amber-400 text-white',
+    blobColor: 'bg-amber-100',
+    variants: [
+      { id: 'v_water', name: 'CR (15 Candles) + Daily Quest', price: 5000 },
+      { id: 'v_earth', name: 'CR Grey (20 Candles) + Daily Quest', price: 7000 },
+      { id: 'v_air', name: 'CR Grey (20 Candles) + Daily Quest + Event Ticket*', price: 8000 },
+    ]
+  },
+  {
     id: 'cr_full',
-    name: 'Full Candle Run (20-21 Candles)',
+    name: 'Candle Run',
     price: 5000,
     category: 'candlerun',
     tag: 'Best Seller',

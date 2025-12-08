@@ -19,15 +19,11 @@ import {
     XCircle,
     Moon,
     Info,
-    CreditCard,
-    Wallet,
     QrCode,
-    User,
     UserCheck,
-    LogIn,
-    AlertCircle,
+    Wallet,
     CheckCircle2,
-    HelpCircle,
+    AlertCircle,
     Check,
 } from "lucide-vue-next";
 import { doc, updateDoc, increment } from "firebase/firestore";
@@ -43,13 +39,12 @@ const selectedPayment = ref("qris");
 
 // State Modal & Loading
 const showConfirmModal = ref(false);
-const showSuccessModal = ref(false); // Modal Sukses Baru
+const showSuccessModal = ref(false);
 const isProcessingPayment = ref(false);
-const countdown = ref(3); // Hitung mundur
+const countdown = ref(3);
 
 // State Form Auth Mini
 const isRegisterMode = ref(false);
-// UPDATE: Menggunakan username, bukan email
 const authForm = reactive({ name: "", username: "", password: "" });
 const isAuthLoading = ref(false);
 
@@ -61,17 +56,6 @@ watch(
         }
     },
 );
-
-const paymentMethods = [
-    { id: "qris", label: "QRIS / E-Wallet", icon: QrCode },
-    { id: "member", label: "Saldo Member", icon: UserCheck },
-];
-
-const MIN_ORDER_FOR_PROMO = 10000;
-const amountNeededForPromo = computed(() =>
-    Math.max(0, MIN_ORDER_FOR_PROMO - store.totalPrice),
-);
-const isPromoEligible = computed(() => store.totalPrice >= MIN_ORDER_FOR_PROMO);
 
 const getIcon = (type) => {
     const icons = { Wind, Star, Heart, Flame, Cloud, Sparkles, Moon };
@@ -85,6 +69,12 @@ const formatRupiah = (num) =>
         minimumFractionDigits: 0,
     }).format(num);
 
+const MIN_ORDER_FOR_PROMO = 10000;
+const amountNeededForPromo = computed(() =>
+    Math.max(0, MIN_ORDER_FOR_PROMO - store.totalPrice),
+);
+const isPromoEligible = computed(() => store.totalPrice >= MIN_ORDER_FOR_PROMO);
+
 const handleApplyPromo = async () => {
     if (!promoInput.value) return;
     const result = await promoStore.applyPromo(promoInput.value);
@@ -95,32 +85,27 @@ const handleApplyPromo = async () => {
 const handleAuthSubmit = async () => {
     isAuthLoading.value = true;
     if (isRegisterMode.value) {
-        // Validasi Register dengan Username
         if (!authForm.name || !authForm.username || !authForm.password) {
             alert("Isi semua data dulu ya!");
             isAuthLoading.value = false;
             return;
         }
-        // Register: Append domain dummy agar diterima Firebase Auth
         await userStore.register(
             authForm.name,
             authForm.username + "@aiyashop.com",
             authForm.password,
         );
     } else {
-        // Validasi Login dengan Username
         if (!authForm.username || !authForm.password) {
             alert("Username & Password wajib diisi!");
             isAuthLoading.value = false;
             return;
         }
-        // Login: Store sudah menangani logika username
         await userStore.login(authForm.username, authForm.password);
     }
     isAuthLoading.value = false;
 };
 
-// --- LOGIC TRIGGER CHECKOUT ---
 const handleCheckoutClick = () => {
     if (store.items.length === 0) return;
 
@@ -146,45 +131,35 @@ const handleCheckoutClick = () => {
     }
 };
 
-// --- LOGIC EKSEKUSI PEMBAYARAN MEMBER ---
 const confirmMemberPayment = async () => {
     isProcessingPayment.value = true;
-
     const finalTotal =
         promoStore.activeCode && isPromoEligible.value
             ? promoStore.calculateTotal(store.totalPrice)
             : store.totalPrice;
 
     try {
-        // 1. Potong Saldo
         const userRef = doc(db, "users", userStore.user.uid);
         await updateDoc(userRef, {
             saldo: increment(-finalTotal),
             totalTopUp: increment(0),
         });
-
-        // 2. Refresh Data
         await userStore.fetchMemberData();
 
-        // 3. Tutup Modal Konfirmasi -> Buka Modal Sukses
         showConfirmModal.value = false;
         showSuccessModal.value = true;
         countdown.value = 3;
 
-        // 4. Mulai Countdown ke WA
         const timer = setInterval(() => {
             countdown.value--;
             if (countdown.value <= 0) {
                 clearInterval(timer);
-                // Eksekusi ke WA
                 processCheckout("LUNAS (Saldo Member)");
-
-                // Bersihkan Cart setelah redirect
                 setTimeout(() => {
                     showSuccessModal.value = false;
                     store.items = [];
                     promoStore.resetPromo();
-                    store.toggleCart(); // Tutup drawer
+                    store.toggleCart();
                 }, 1000);
             }
         }, 1000);
@@ -222,36 +197,31 @@ const processCheckout = (statusBayar) => {
     message += `%0AMetode Bayar: ${selectedPayment.value === "member" ? "💎 Saldo Member" : "QRIS / E-Wallet"}`;
     message += `%0AStatus: *${statusBayar}*`;
 
-    // Buka tab baru
     window.open(`https://wa.me/6285942963323?text=${message}`, "_blank");
 };
 </script>
 
 <template>
     <div class="cart-drawer">
-        <!-- Overlay -->
         <transition name="fade">
             <div
                 v-if="store.isOpen"
-                class="fixed inset-0 bg-slate-900/20 backdrop-blur-sm z-[60] transition-opacity"
+                class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] transition-opacity"
                 @click="store.toggleCart()"
             ></div>
         </transition>
 
-        <!-- Drawer Container -->
         <div
-            class="fixed top-0 right-0 h-full w-full md:w-[420px] bg-[#FDFBF7] dark:bg-slate-900 z-[70] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
+            class="fixed top-0 right-0 h-full w-full md:w-[420px] bg-[#FDFBF7] dark:bg-charcoal z-[70] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
             :class="store.isOpen ? 'translate-x-0' : 'translate-x-full'"
         >
             <div class="h-full flex flex-col relative overflow-hidden">
-                <!-- Background Decoration -->
                 <div
-                    class="absolute top-0 right-0 w-64 h-64 bg-sky-100 dark:bg-slate-800 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none"
+                    class="absolute top-0 right-0 w-64 h-64 bg-sky-100 dark:bg-slate-800/50 rounded-full blur-3xl -z-10 opacity-60 pointer-events-none"
                 ></div>
 
-                <!-- Header -->
                 <div
-                    class="p-6 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border-b border-sky-100/50 dark:border-slate-800"
+                    class="p-6 flex justify-between items-center bg-white/50 dark:bg-charcoal/80 backdrop-blur-md border-b border-sky-100/50 dark:border-slate-800"
                 >
                     <h2
                         class="text-xl font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"
@@ -260,13 +230,12 @@ const processCheckout = (statusBayar) => {
                     </h2>
                     <button
                         @click="store.toggleCart()"
-                        class="p-2 hover:bg-rose-50 dark:hover:bg-slate-800 text-slate-400 hover:text-rose-500 rounded-full transition"
+                        class="p-2 hover:bg-rose-50 dark:hover:bg-slate-800 text-slate-400 dark:text-slate-500 hover:text-rose-500 dark:hover:text-rose-400 rounded-full transition"
                     >
                         <X :size="24" />
                     </button>
                 </div>
 
-                <!-- Items List -->
                 <div
                     class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
                 >
@@ -277,7 +246,10 @@ const processCheckout = (statusBayar) => {
                         <div
                             class="bg-sky-50 dark:bg-slate-800 p-6 rounded-full mb-4 animate-float-slow"
                         >
-                            <Wind class="text-sky-300" :size="48" />
+                            <Wind
+                                class="text-sky-300 dark:text-sky-500"
+                                :size="48"
+                            />
                         </div>
                         <p
                             class="text-slate-500 dark:text-slate-400 font-bold mb-2"
@@ -286,7 +258,7 @@ const processCheckout = (statusBayar) => {
                         </p>
                         <button
                             @click="store.toggleCart()"
-                            class="text-sky-500 font-bold hover:underline"
+                            class="text-sky-500 dark:text-sky-400 font-bold hover:underline"
                         >
                             Lihat Menu
                         </button>
@@ -296,7 +268,7 @@ const processCheckout = (statusBayar) => {
                         v-else
                         v-for="item in store.items"
                         :key="item.id"
-                        class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-sky-50 dark:border-slate-700 shadow-sm flex gap-4 items-start group hover:shadow-md transition relative"
+                        class="bg-white dark:bg-graphite p-4 rounded-3xl border border-sky-50 dark:border-slate-700 shadow-sm flex gap-4 items-start group hover:shadow-md transition relative"
                     >
                         <div
                             :class="`w-12 h-12 rounded-2xl ${item.color || 'bg-slate-100'} flex items-center justify-center text-white shrink-0 mt-1 shadow-sm`"
@@ -313,16 +285,18 @@ const processCheckout = (statusBayar) => {
                                 {{ item.name }}
                             </h4>
                             <p
-                                class="text-[10px] text-slate-400 mb-2 line-clamp-2 leading-relaxed"
+                                class="text-[10px] text-slate-400 dark:text-slate-500 mb-2 line-clamp-2 leading-relaxed"
                             >
                                 {{ item.desc }}
                             </p>
                             <div class="flex items-center justify-between">
-                                <p class="text-sky-500 font-bold text-sm">
+                                <p
+                                    class="text-sky-500 dark:text-sky-400 font-bold text-sm"
+                                >
                                     {{ formatRupiah(item.price * item.qty) }}
                                 </p>
                                 <div
-                                    class="flex items-center gap-2 bg-slate-50 dark:bg-slate-700 rounded-lg p-1 border border-slate-100 dark:border-slate-600"
+                                    class="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-lg p-1 border border-slate-100 dark:border-slate-700"
                                 >
                                     <button
                                         @click="store.updateQty(item.id, -1)"
@@ -345,7 +319,7 @@ const processCheckout = (statusBayar) => {
                         </div>
                         <button
                             @click="store.removeItem(item.id)"
-                            class="absolute top-3 right-3 p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-700 rounded-lg transition"
+                            class="absolute top-3 right-3 p-1.5 text-slate-300 dark:text-slate-600 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-700 dark:hover:text-rose-400 rounded-lg transition"
                             title="Hapus Item"
                         >
                             <Trash2 :size="16" />
@@ -353,11 +327,9 @@ const processCheckout = (statusBayar) => {
                     </div>
                 </div>
 
-                <!-- Footer Area -->
                 <div
-                    class="bg-white dark:bg-slate-800 border-t border-dashed border-sky-100 dark:border-slate-700 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
+                    class="bg-white dark:bg-graphite border-t border-dashed border-sky-100 dark:border-slate-700 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
                 >
-                    <!-- Promo Code -->
                     <div class="px-6 pt-4 pb-2">
                         <div class="flex gap-2">
                             <div class="relative flex-1 group">
@@ -373,7 +345,7 @@ const processCheckout = (statusBayar) => {
                                     v-model="promoInput"
                                     type="text"
                                     placeholder="Kode Promo"
-                                    class="pl-9 pr-8 w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl py-2.5 text-sm focus:outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-50 dark:focus:ring-slate-700 transition uppercase font-bold text-slate-600 dark:text-slate-200 placeholder:font-normal"
+                                    class="pl-9 pr-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl py-2.5 text-sm focus:outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-50 dark:focus:ring-slate-700 transition uppercase font-bold text-slate-600 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
                                     @keyup.enter="handleApplyPromo"
                                     :disabled="!!promoStore.activeCode"
                                 />
@@ -433,7 +405,6 @@ const processCheckout = (statusBayar) => {
                         </div>
                     </div>
 
-                    <!-- Payment Method -->
                     <div class="px-6 py-2">
                         <p
                             class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2"
@@ -449,7 +420,7 @@ const processCheckout = (statusBayar) => {
                                 :class="
                                     selectedPayment === 'qris'
                                         ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-300 shadow-sm'
-                                        : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                 "
                             >
                                 <QrCode :size="14" /> QRIS / E-Wallet
@@ -460,7 +431,7 @@ const processCheckout = (statusBayar) => {
                                 :class="
                                     selectedPayment === 'member'
                                         ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
-                                        : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-600'
+                                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                 "
                             >
                                 <UserCheck :size="14" /> Member
@@ -470,7 +441,7 @@ const processCheckout = (statusBayar) => {
                         <transition name="fade">
                             <div
                                 v-if="selectedPayment === 'member'"
-                                class="mt-3 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-xl border border-indigo-100 dark:border-indigo-800 relative overflow-hidden"
+                                class="mt-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900 relative overflow-hidden"
                             >
                                 <div v-if="userStore.user">
                                     <div
@@ -502,7 +473,7 @@ const processCheckout = (statusBayar) => {
                                     </div>
                                     <div
                                         v-else
-                                        class="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1"
+                                        class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-1"
                                     >
                                         <CheckCircle2 :size="12" /> Saldo cukup,
                                         siap potong!
@@ -524,20 +495,19 @@ const processCheckout = (statusBayar) => {
                                             v-model="authForm.name"
                                             type="text"
                                             placeholder="Nama Panggilan Kamu"
-                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
+                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
                                         />
-                                        <!-- UPDATE: Input Email diubah jadi Username -->
                                         <input
                                             v-model="authForm.username"
                                             type="text"
                                             placeholder="Username"
-                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
+                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
                                         />
                                         <input
                                             v-model="authForm.password"
                                             type="password"
                                             placeholder="Password (Min. 6)"
-                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-white focus:outline-none focus:border-indigo-400"
+                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
                                         />
                                     </div>
                                     <p
@@ -570,7 +540,7 @@ const processCheckout = (statusBayar) => {
                                                     !isRegisterMode;
                                                 userStore.authError = null;
                                             "
-                                            class="px-3 py-1.5 bg-white dark:bg-slate-700 text-indigo-500 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-50 dark:hover:bg-slate-600"
+                                            class="px-3 py-1.5 bg-white dark:bg-slate-800 text-indigo-500 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-50 dark:hover:bg-slate-700"
                                         >
                                             {{
                                                 isRegisterMode
@@ -584,10 +554,9 @@ const processCheckout = (statusBayar) => {
                         </transition>
                     </div>
 
-                    <!-- Totals -->
                     <div class="p-6 pt-2 space-y-3">
                         <div
-                            class="flex justify-between items-center text-xs text-slate-400"
+                            class="flex justify-between items-center text-xs text-slate-400 dark:text-slate-500"
                         >
                             <span>Subtotal</span
                             ><span>{{ formatRupiah(store.totalPrice) }}</span>
@@ -637,8 +606,8 @@ const processCheckout = (statusBayar) => {
                             class="w-full btn-bouncy text-white font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4 hover:brightness-105"
                             :class="
                                 selectedPayment === 'member'
-                                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-indigo-100'
-                                    : 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-emerald-100'
+                                    ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-indigo-100 dark:shadow-none'
+                                    : 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-emerald-100 dark:shadow-none'
                             "
                         >
                             <Loader2
@@ -661,18 +630,17 @@ const processCheckout = (statusBayar) => {
             </div>
         </div>
 
-        <!-- MODAL KONFIRMASI IMUT (KHUSUS MEMBER) -->
         <transition name="fade">
             <div
                 v-if="showConfirmModal"
                 class="fixed inset-0 z-[80] flex items-center justify-center p-4"
             >
                 <div
-                    class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
+                    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
                     @click="showConfirmModal = false"
                 ></div>
                 <div
-                    class="bg-white dark:bg-slate-800 w-full max-w-xs rounded-[2rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 p-6 border-4 border-indigo-50 dark:border-indigo-900 text-center"
+                    class="bg-white dark:bg-graphite w-full max-w-xs rounded-[2rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 p-6 border-4 border-indigo-50 dark:border-indigo-900 text-center"
                 >
                     <div
                         class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"
@@ -703,7 +671,7 @@ const processCheckout = (statusBayar) => {
                         </button>
                         <button
                             @click="confirmMemberPayment"
-                            class="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-200 hover:bg-indigo-600 transition btn-bouncy"
+                            class="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-600 transition btn-bouncy"
                         >
                             Gass Bayar! 🚀
                         </button>
@@ -712,17 +680,16 @@ const processCheckout = (statusBayar) => {
             </div>
         </transition>
 
-        <!-- MODAL SUKSES (ANIMASI CENTANG) -->
         <transition name="fade">
             <div
                 v-if="showSuccessModal"
                 class="fixed inset-0 z-[90] flex items-center justify-center p-4"
             >
                 <div
-                    class="absolute inset-0 bg-emerald-900/20 backdrop-blur-sm transition-opacity"
+                    class="absolute inset-0 bg-emerald-900/30 backdrop-blur-sm transition-opacity"
                 ></div>
                 <div
-                    class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300 p-8 text-center border-4 border-emerald-50 dark:border-emerald-900"
+                    class="bg-white dark:bg-graphite w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300 p-8 text-center border-4 border-emerald-50 dark:border-emerald-900"
                 >
                     <div
                         class="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce"
@@ -735,21 +702,21 @@ const processCheckout = (statusBayar) => {
                     </div>
 
                     <h3
-                        class="text-2xl font-extrabold text-emerald-600 mb-2 dark:text-emerald-400"
+                        class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mb-2"
                     >
                         Pembayaran Sukses!
                     </h3>
                     <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">
                         Yeay! Saldo berhasil dipotong. <br />
                         Mengalihkan ke WhatsApp dalam
-                        <span class="font-bold text-emerald-600">{{
-                            countdown
-                        }}</span
+                        <span
+                            class="font-bold text-emerald-600 dark:text-emerald-400"
+                            >{{ countdown }}</span
                         >...
                     </p>
 
                     <button
-                        class="w-full py-3 rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400 font-bold hover:bg-emerald-100 transition"
+                        class="w-full py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition"
                         disabled
                     >
                         Mohon tunggu sebentar... ⏳
@@ -783,11 +750,10 @@ const processCheckout = (statusBayar) => {
 
 /* Dark mode scrollbar thumb */
 :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Remove glow / button box-shadow in dark mode inside this drawer only.
-   This prevents any button glow from showing when dark theme is active. */
+/* Remove glow / button box-shadow in dark mode inside this drawer only. */
 :global(.dark) .cart-drawer button,
 :global(.dark) .cart-drawer .btn-bouncy,
 :global(.dark) .cart-drawer .shadow-lg,
@@ -798,7 +764,6 @@ const processCheckout = (statusBayar) => {
     filter: none !important;
 }
 
-/* Make sure focus outlines remain accessible (if you want to adjust later). */
 :global(.dark) .cart-drawer button:focus {
     box-shadow: none !important;
     outline: 2px solid rgba(255, 255, 255, 0.06);

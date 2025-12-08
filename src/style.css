@@ -7,14 +7,15 @@
    ========================= */
 
 body {
-  @apply bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white;
+    @apply bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white;
 
-  /* background light yang lembut, boleh diubah kalau mau */
-  background-image: radial-gradient(circle at top left, #e0f2fe 0, transparent 55%),
-    radial-gradient(circle at bottom right, #fee2e2 0, transparent 55%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  background-size: cover;
+    /* background light yang lembut, boleh diubah kalau mau */
+    background-image:
+        radial-gradient(circle at top left, #e0f2fe 0, transparent 55%),
+        radial-gradient(circle at bottom right, #fee2e2 0, transparent 55%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
 /* =========================
@@ -23,32 +24,32 @@ body {
 /* Pastikan kamu tambahin class .dark di <html> atau <body> dari JS-mu */
 
 .dark body {
-  /* Base warna dark (sesuaikan dengan tailwind.config.js kamu) */
-  /* Misal:
+    /* Base warna dark (sesuaikan dengan tailwind.config.js kamu) */
+    /* Misal:
      charcoal  = #020617
      graphite  = #1e293b
      sky.deep  = #FDFBF7
   */
-  @apply bg-charcoal text-slate-300 selection:bg-indigo-500 selection:text-white;
+    @apply bg-charcoal text-slate-300 selection:bg-indigo-500 selection:text-white;
 
-  /* Gradient dark yang konsisten + sedikit pattern */
-  background-image:
-    radial-gradient(rgba(255, 255, 255, 0.04) 0.5px, transparent 0.5px),
-    radial-gradient(rgba(15, 23, 42, 0.6) 0.5px, transparent 0.5px),
-    linear-gradient(135deg, #020617 0%, #FDFBF7 35%, #020617 100%);
+    /* Gradient dark yang konsisten + sedikit pattern */
+    background-image:
+        radial-gradient(rgba(255, 255, 255, 0.04) 0.5px, transparent 0.5px),
+        radial-gradient(rgba(15, 23, 42, 0.6) 0.5px, transparent 0.5px),
+        linear-gradient(135deg, #020617 0%, #fdfbf7 35%, #020617 100%);
 
-  background-size:
-    20px 20px,
-    20px 20px,
-    cover;
+    background-size:
+        20px 20px,
+        20px 20px,
+        cover;
 
-  background-position:
-    0 0,
-    10px 10px,
-    center;
+    background-position:
+        0 0,
+        10px 10px,
+        center;
 
-  background-attachment: fixed;
-  background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
 }
 
 /* =========================
@@ -57,12 +58,12 @@ body {
 
 /* Card utama yang kelihatan "glass" / soft */
 .card-soft {
-  @apply bg-white/80 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] rounded-[2rem] transition-colors duration-300;
+    @apply bg-white/80 backdrop-blur-md border border-white/60 shadow-[0_8px_32px_rgba(31,38,135,0.05)] rounded-[2rem] transition-colors duration-300;
 }
 
 /* Card saat dark mode – warna konsisten dengan background */
 .dark .card-soft {
-  @apply bg-graphite/80 border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.3)] text-slate-200;
+    @apply bg-graphite/80 border-white/5 shadow-[0_8px_32px_rgba(0,0,0,0.3)] text-slate-200;
 }
 
 /* OPTIONAL: kalau kamu punya navbar/glass lain, boleh taruh disini,
