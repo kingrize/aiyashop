@@ -553,7 +553,7 @@ const faqs = [
                         <img
                             :src="skyKidGif"
                             alt="Sky Kid Mascot"
-                            class="relative z-10 w-72 h-72 object-contain drop-shadow-2xl scale-110 hover:scale-125 transition-transform duration-500 -mt-4"
+                            class="relative z-10 w-72 h-72 object-contain scale-110 hover:scale-125 transition-transform duration-500 -mt-4 will-change-transform"
                         />
 
                         <div
