@@ -1,6 +1,8 @@
 <script setup>
 import { ref, provide } from "vue";
 import Navbar from "./components/Navbar.vue";
+import Footer from "./components/Footer.vue";
+import BottomNav from "./components/BottomNav.vue"; // 1. Import
 import CartDrawer from "./components/CartDrawer.vue";
 import Toast from "./components/Toast.vue";
 import { RouterView } from "vue-router";
@@ -8,7 +10,6 @@ import { Cloud } from "lucide-vue-next";
 
 const isLoading = ref(false);
 
-// Provide fungsi loading ke semua child component
 provide("globalLoading", {
     start: () => (isLoading.value = true),
     finish: () => (isLoading.value = false),
@@ -17,9 +18,8 @@ provide("globalLoading", {
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300"
+        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col pb-20 md:pb-0"
     >
-        <!-- GLOBAL LOADER -->
         <transition name="fade">
             <div
                 v-if="isLoading"
@@ -45,20 +45,21 @@ provide("globalLoading", {
 
         <Navbar />
 
-        <!-- Router View dengan Transisi -->
-        <router-view v-slot="{ Component }">
-            <transition name="page-fade" mode="out-in">
-                <component :is="Component" />
-            </transition>
-        </router-view>
+        <main class="flex-1">
+            <router-view v-slot="{ Component }">
+                <transition name="page-fade" mode="out-in">
+                    <component :is="Component" />
+                </transition>
+            </router-view>
+        </main>
 
-        <CartDrawer />
+        <Footer />
+        <BottomNav /> <CartDrawer />
         <Toast />
     </div>
 </template>
 
 <style scoped>
-/* Transisi Global Loader */
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;
@@ -68,7 +69,6 @@ provide("globalLoading", {
     opacity: 0;
 }
 
-/* Transisi Halaman */
 .page-fade-enter-active,
 .page-fade-leave-active {
     transition:

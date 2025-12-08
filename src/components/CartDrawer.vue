@@ -26,7 +26,14 @@ import {
     AlertCircle,
     Check,
 } from "lucide-vue-next";
-import { doc, updateDoc, increment } from "firebase/firestore";
+import {
+    doc,
+    updateDoc,
+    increment,
+    collection,
+    addDoc,
+    serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 const store = useCartStore();
@@ -139,12 +146,32 @@ const confirmMemberPayment = async () => {
             : store.totalPrice;
 
     try {
+        // 1. Potong Saldo
         const userRef = doc(db, "users", userStore.user.uid);
         await updateDoc(userRef, {
             saldo: increment(-finalTotal),
             totalTopUp: increment(0),
         });
+
+        // 2. CATAT RIWAYAT TRANSAKSI (NEW FEATURE)
+        const summaryItems = store.items
+            .map((i) => `${i.name} (${i.qty}x)`)
+            .join(", ");
+        await addDoc(
+            collection(db, "users", userStore.user.uid, "transactions"),
+            {
+                type: "expense", // 'income' untuk topup, 'expense' untuk beli
+                title: "Pembelian Joki",
+                desc: summaryItems,
+                amount: finalTotal,
+                createdAt: serverTimestamp(),
+                status: "success",
+            },
+        );
+
+        // 3. Refresh Data
         await userStore.fetchMemberData();
+        await userStore.fetchTransactions(); // Refresh list history juga
 
         showConfirmModal.value = false;
         showSuccessModal.value = true;
@@ -164,7 +191,7 @@ const confirmMemberPayment = async () => {
             }
         }, 1000);
     } catch (error) {
-        console.error("Error potong saldo:", error);
+        console.error("Error transaksi:", error);
         alert("Gagal memproses pembayaran. Coba lagi ya!");
     } finally {
         isProcessingPayment.value = false;

@@ -7,27 +7,40 @@ import {
   onAuthStateChanged,
   updateProfile,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  query,
+  orderBy,
+  limit,
+  getDocs,
+} from "firebase/firestore";
 
 export const useUserStore = defineStore("user", {
   state: () => ({
     user: null,
     memberData: null,
+    transactions: [],
     loading: true,
     authError: null,
+    showAuthModal: false, // 1. STATE GLOBAL UNTUK MODAL LOGIN
   }),
 
   actions: {
-    // --- LOGIN DENGAN USERNAME ---
-    // Input: "arya" -> Diproses jadi "arya@aiyashop.com"
+    // Helper untuk buka/tutup modal
+    toggleAuthModal(value) {
+      this.showAuthModal = value;
+    },
+
     async login(username, password) {
       this.authError = null;
       try {
-        // Auto-append domain jika user tidak memasukkan email lengkap
         const email = username.includes("@")
           ? username
           : `${username}@aiyashop.com`;
-
         const userCredential = await signInWithEmailAndPassword(
           auth,
           email,
@@ -43,13 +56,15 @@ export const useUserStore = defineStore("user", {
       }
     },
 
-    // ... (Sisa fungsi register, logout, fetchMemberData sama persis seperti file sebelumnya) ...
-    // Pastikan copy semua fungsi lainnya juga
+    // ... (SISA KODE SAMA SEPERTI SEBELUMNYA: logout, fetchMemberData, fetchTransactions, dll) ...
+
     async logout() {
       await signOut(auth);
       this.user = null;
       this.memberData = null;
+      this.transactions = [];
     },
+
     async fetchMemberData() {
       if (!this.user) return;
       const docRef = doc(db, "users", this.user.uid);
@@ -59,7 +74,6 @@ export const useUserStore = defineStore("user", {
         if (data.totalTopUp === undefined) data.totalTopUp = data.saldo || 0;
         this.memberData = data;
       } else {
-        // Auto-fix user manual
         const tempName = this.user.email.split("@")[0];
         const formattedName =
           tempName.charAt(0).toUpperCase() + tempName.slice(1);
@@ -79,6 +93,26 @@ export const useUserStore = defineStore("user", {
         this.memberData = newMemberData;
       }
     },
+
+    async fetchTransactions() {
+      if (!this.user) return;
+      try {
+        const q = query(
+          collection(db, "users", this.user.uid, "transactions"),
+          orderBy("createdAt", "desc"),
+          limit(20),
+        );
+        const querySnapshot = await getDocs(q);
+        this.transactions = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate() || new Date(),
+        }));
+      } catch (error) {
+        console.error("Gagal ambil transaksi:", error);
+      }
+    },
+
     async updateUserName(newName) {
       if (!this.user || !this.memberData) return;
       try {
@@ -92,23 +126,28 @@ export const useUserStore = defineStore("user", {
         return false;
       }
     },
+
     initAuth() {
       onAuthStateChanged(auth, async (user) => {
         this.user = user;
-        if (user) await this.fetchMemberData();
+        if (user) {
+          await this.fetchMemberData();
+          this.fetchTransactions();
+        }
         this.loading = false;
       });
     },
+
     mapErrorMessage(code) {
       switch (code) {
         case "auth/user-not-found":
-          return "Username tidak ditemukan. Hubungi admin.";
+          return "Username tidak ditemukan.";
         case "auth/wrong-password":
           return "Password salah.";
         case "auth/invalid-credential":
-          return "Username atau password salah.";
+          return "Username/Password salah.";
         case "auth/too-many-requests":
-          return "Terlalu banyak mencoba, tunggu sebentar.";
+          return "Tunggu sebentar ya.";
         default:
           return "Gagal masuk.";
       }

@@ -2,33 +2,29 @@
 import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
 import { useCartStore } from "../stores/cart";
 import { useUserStore } from "../stores/user";
-import { useThemeStore } from "../stores/theme"; // 1. Import Theme Store
+import { useThemeStore } from "../stores/theme";
 import {
     Cloud,
-    Sparkles,
     ShoppingBag,
-    Menu,
-    X,
-    Star,
     LogIn,
-    User,
     LogOut,
     Loader2,
     AlertCircle,
     UserPlus,
-    Sun, // 2. Import Icon Sun
-    Moon, // 2. Import Icon Moon
+    Sun,
+    Moon,
+    User,
+    X,
 } from "lucide-vue-next";
 
 const cart = useCartStore();
 const userStore = useUserStore();
-const themeStore = useThemeStore(); // 3. Init Theme Store
+const themeStore = useThemeStore();
 
 const totalItems = computed(() => cart.totalItems);
-const mobileOpen = ref(false);
 const isScrolled = ref(false);
 const showProfileMenu = ref(false);
-const showAuthModal = ref(false);
+// const showAuthModal = ref(false); // HAPUS INI, GANTI DENGAN STORE
 
 const authForm = reactive({ username: "", password: "" });
 const isAuthLoading = ref(false);
@@ -42,7 +38,6 @@ onUnmounted(() => window.removeEventListener("scroll", handleScroll));
 const scrollToSection = (id) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth" });
-    mobileOpen.value = false;
 };
 
 const memberName = computed(() => {
@@ -62,7 +57,7 @@ const handleNavbarAuth = async () => {
     const success = await userStore.login(authForm.username, authForm.password);
     isAuthLoading.value = false;
     if (success) {
-        showAuthModal.value = false;
+        userStore.toggleAuthModal(false); // TUTUP PAKE STORE
         authForm.username = "";
         authForm.password = "";
     }
@@ -70,7 +65,6 @@ const handleNavbarAuth = async () => {
 
 const openCart = () => {
     cart.toggleCart();
-    mobileOpen.value = false;
 };
 const formatRupiah = (val) =>
     new Intl.NumberFormat("id-ID", {
@@ -90,26 +84,33 @@ const formatRupiah = (val) =>
         "
     >
         <nav
-            class="mx-auto flex max-w-6xl items-center justify-between px-6 py-3 md:py-4"
+            class="mx-auto flex max-w-6xl items-center justify-between px-4 md:px-6 py-3 md:py-4"
         >
             <button
                 class="flex items-center gap-3 focus:outline-none group text-left rounded-2xl p-1 -ml-1 transition"
                 @click="scrollToSection('home')"
             >
                 <div
-                    class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 via-cyan-400 to-emerald-300 shadow-md group-hover:scale-105 transition-transform duration-300"
+                    class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-br from-sky-400 via-cyan-400 to-emerald-300 shadow-md group-hover:scale-105 transition-transform duration-300"
                 >
-                    <Cloud :size="26" class="text-white fill-white/20" />
+                    <Cloud
+                        :size="20"
+                        class="text-white fill-white/20 md:hidden"
+                    />
+                    <Cloud
+                        :size="26"
+                        class="text-white fill-white/20 hidden md:block"
+                    />
                 </div>
                 <div class="leading-tight">
                     <p
-                        class="text-lg font-bold tracking-tight text-slate-700 dark:text-slate-200"
+                        class="text-base md:text-lg font-bold tracking-tight text-slate-700 dark:text-slate-200"
                     >
-                        Aiya<span class="text-sky-500">Shop</span>
-                        <span class="text-amber-400 ml-0.5">✨</span>
+                        Aiya<span class="text-sky-500">Shop</span
+                        ><span class="text-amber-400 ml-0.5">✨</span>
                     </p>
                     <p
-                        class="text-xs font-medium text-slate-400 group-hover:text-sky-400 transition-colors"
+                        class="hidden md:block text-xs font-medium text-slate-400 group-hover:text-sky-400 transition-colors"
                     >
                         Teman Joki Sky Kamu ☁️
                     </p>
@@ -131,19 +132,12 @@ const formatRupiah = (val) =>
                 >
                     Menu Jajan
                 </button>
-
                 <div
                     class="h-5 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"
                 ></div>
-
                 <button
                     @click="themeStore.toggleTheme"
                     class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-amber-500 hover:border-amber-300 hover:bg-amber-50 transition btn-bouncy dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-300 dark:hover:bg-slate-700"
-                    :title="
-                        themeStore.isDark
-                            ? 'Ganti ke Light Mode'
-                            : 'Ganti ke Dark Mode'
-                    "
                 >
                     <component
                         :is="themeStore.isDark ? Sun : Moon"
@@ -156,10 +150,9 @@ const formatRupiah = (val) =>
                     v-if="userStore.loading"
                     class="w-20 h-8 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse"
                 ></div>
-
                 <button
                     v-else-if="!userStore.user"
-                    @click="showAuthModal = true"
+                    @click="userStore.toggleAuthModal(true)"
                     class="btn-bouncy px-5 py-2 rounded-full bg-slate-800 text-white text-xs font-bold shadow-md hover:bg-slate-700 flex items-center gap-2 border border-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
                 >
                     <LogIn :size="14" /> Member Login
@@ -186,7 +179,6 @@ const formatRupiah = (val) =>
                             </p>
                         </div>
                     </button>
-
                     <div
                         v-if="showProfileMenu"
                         class="absolute top-full right-0 mt-3 w-56 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-sky-100 dark:border-slate-700 overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-200"
@@ -216,7 +208,6 @@ const formatRupiah = (val) =>
                         </button>
                     </div>
                 </div>
-
                 <button
                     class="relative ml-1 flex h-11 w-11 items-center justify-center rounded-full border border-sky-100 bg-white hover:bg-sky-50 hover:border-sky-200 transition btn-bouncy dark:bg-slate-800 dark:border-slate-700 dark:hover:bg-slate-700"
                     @click="openCart"
@@ -228,63 +219,43 @@ const formatRupiah = (val) =>
                     <span
                         v-if="totalItems > 0"
                         class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-rose-400 text-[10px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-900 animate-bounce"
+                        >{{ totalItems }}</span
                     >
-                        {{ totalItems }}
-                    </span>
                 </button>
             </div>
 
-            <div class="flex items-center gap-3 md:hidden">
+            <div class="flex items-center gap-2 md:hidden">
                 <button
                     @click="themeStore.toggleTheme"
-                    class="flex h-10 w-10 items-center justify-center rounded-full border border-slate-100 bg-white text-slate-400 transition dark:bg-slate-800 dark:border-slate-700"
+                    class="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100/50 dark:bg-slate-800 text-slate-400 transition active:scale-90"
                 >
                     <component
                         :is="themeStore.isDark ? Sun : Moon"
-                        :size="20"
+                        :size="18"
                         :class="themeStore.isDark ? 'text-amber-400' : ''"
                     />
-                </button>
-
-                <button
-                    class="relative flex h-10 w-10 items-center justify-center rounded-full border border-sky-100 bg-white hover:bg-sky-50 transition dark:bg-slate-800 dark:border-slate-700"
-                    @click="openCart"
-                >
-                    <ShoppingBag :size="20" class="text-sky-500" />
-                    <span
-                        v-if="totalItems > 0"
-                        class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-rose-400 ring-2 ring-white dark:ring-slate-900"
-                    ></span>
-                </button>
-                <button
-                    class="flex h-10 w-10 items-center justify-center rounded-full bg-sky-50 text-sky-500 hover:bg-sky-100 transition border border-sky-100 dark:bg-slate-800 dark:text-sky-400 dark:border-slate-700"
-                    @click="mobileOpen = !mobileOpen"
-                >
-                    <component :is="mobileOpen ? X : Menu" :size="22" />
                 </button>
             </div>
         </nav>
 
         <transition name="fade">
             <div
-                v-if="showAuthModal"
+                v-if="userStore.showAuthModal"
                 class="fixed inset-0 z-[100] flex items-center justify-center p-4"
             >
                 <div
                     class="absolute inset-0 bg-slate-900/30 backdrop-blur-sm transition-opacity"
-                    @click="showAuthModal = false"
+                    @click="userStore.toggleAuthModal(false)"
                 ></div>
-
                 <div
                     class="bg-cream dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 p-8 border-4 border-indigo-50 dark:border-indigo-900"
                 >
                     <button
-                        @click="showAuthModal = false"
+                        @click="userStore.toggleAuthModal(false)"
                         class="absolute top-4 right-4 p-1 text-slate-400 hover:text-rose-500 bg-slate-50 dark:bg-slate-700 rounded-full transition"
                     >
                         <X :size="20" />
                     </button>
-
                     <div class="text-center mb-6">
                         <div
                             class="inline-flex items-center justify-center w-14 h-14 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mb-3 text-indigo-600 dark:text-indigo-400"
@@ -300,7 +271,6 @@ const formatRupiah = (val) =>
                             Silakan masuk menggunakan akun yang diberikan admin.
                         </p>
                     </div>
-
                     <div class="space-y-3">
                         <div class="relative group">
                             <div
@@ -315,7 +285,6 @@ const formatRupiah = (val) =>
                                 class="w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition font-bold text-slate-600 dark:text-slate-200"
                             />
                         </div>
-
                         <input
                             v-model="authForm.password"
                             type="password"
@@ -323,14 +292,12 @@ const formatRupiah = (val) =>
                             class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition font-bold text-slate-600 dark:text-slate-200"
                         />
                     </div>
-
                     <p
                         v-if="userStore.authError"
                         class="text-xs text-rose-500 mt-3 font-bold flex items-center gap-1 justify-center"
                     >
                         <AlertCircle :size="12" /> {{ userStore.authError }}
                     </p>
-
                     <button
                         @click="handleNavbarAuth"
                         :disabled="isAuthLoading"
@@ -343,7 +310,6 @@ const formatRupiah = (val) =>
                         />
                         Masuk Akun
                     </button>
-
                     <div
                         class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-700 text-center"
                     >
@@ -354,106 +320,9 @@ const formatRupiah = (val) =>
                             href="https://wa.me/6285942963323?text=Halo%20Admin%20Aiya!%20Saya%20mau%20daftar%20member%20dong%20✨"
                             target="_blank"
                             class="text-xs text-indigo-500 dark:text-indigo-400 font-bold hover:underline flex items-center justify-center gap-1"
-                        >
-                            Hubungi Admin via WhatsApp <UserPlus :size="12" />
-                        </a>
+                            >Hubungi Admin via WhatsApp <UserPlus :size="12"
+                        /></a>
                     </div>
-                </div>
-            </div>
-        </transition>
-
-        <transition name="fade">
-            <div
-                v-if="mobileOpen"
-                class="md:hidden absolute top-full left-0 w-full bg-white/95 dark:bg-charcoal/95 backdrop-blur-md border-b border-sky-100 dark:border-slate-700 shadow-xl"
-            >
-                <div class="p-4 space-y-2 max-w-md mx-auto">
-                    <div
-                        v-if="userStore.user"
-                        class="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 flex items-center justify-between mb-4 border border-sky-100 dark:border-slate-700 shadow-sm"
-                    >
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="w-10 h-10 rounded-full bg-sky-200 dark:bg-sky-900 flex items-center justify-center text-sky-600 dark:text-sky-300 font-bold uppercase border-2 border-white dark:border-slate-600"
-                            >
-                                {{ memberName[0] }}
-                            </div>
-                            <div>
-                                <p
-                                    class="text-xs text-slate-500 dark:text-slate-400"
-                                >
-                                    Saldo Member
-                                </p>
-                                <p
-                                    class="text-lg font-bold text-sky-600 dark:text-sky-400"
-                                >
-                                    {{
-                                        formatRupiah(
-                                            userStore.memberData?.saldo,
-                                        )
-                                    }}
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            @click="userStore.logout()"
-                            class="p-2 bg-white dark:bg-slate-700 rounded-full text-rose-400 shadow-sm border border-slate-100 dark:border-slate-600"
-                        >
-                            <LogOut :size="18" />
-                        </button>
-                    </div>
-
-                    <button
-                        v-else
-                        @click="
-                            showAuthModal = true;
-                            mobileOpen = false;
-                        "
-                        class="w-full bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-3 rounded-xl font-bold flex justify-center gap-2 mb-4 shadow-lg shadow-slate-200 dark:shadow-none"
-                    >
-                        <LogIn :size="18" /> Member Login
-                    </button>
-
-                    <button
-                        class="flex w-full items-start gap-4 rounded-2xl p-4 hover:bg-sky-50 dark:hover:bg-slate-800 transition text-left group"
-                        @click="scrollToSection('home')"
-                    >
-                        <div
-                            class="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 dark:bg-slate-700 group-hover:bg-sky-200 transition"
-                        >
-                            <Cloud
-                                :size="18"
-                                class="text-sky-500 dark:text-sky-400"
-                            />
-                        </div>
-                        <div>
-                            <span
-                                class="block text-base font-bold text-slate-700 dark:text-slate-200"
-                                >Beranda</span
-                            >
-                        </div>
-                    </button>
-                    <button
-                        class="flex w-full items-start gap-4 rounded-2xl p-4 hover:bg-amber-50 dark:hover:bg-slate-800 transition text-left group"
-                        @click="scrollToSection('services')"
-                    >
-                        <div
-                            class="mt-1 flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 dark:bg-slate-700 group-hover:bg-amber-200 transition"
-                        >
-                            <Star
-                                :size="18"
-                                class="text-amber-500 dark:text-amber-400"
-                            />
-                        </div>
-                        <div>
-                            <span
-                                class="block text-base font-bold text-slate-700 dark:text-slate-200"
-                                >Menu Jajan</span
-                            ><span class="text-xs text-slate-400"
-                                >Pilih paket joki</span
-                            >
-                        </div>
-                    </button>
                 </div>
             </div>
         </transition>
