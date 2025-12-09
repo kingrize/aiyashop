@@ -25,15 +25,21 @@ const userStore = useUserStore();
 const promoStore = usePromoStore();
 const router = useRouter();
 
+// UI State
 const activeTab = ref("dashboard");
 const searchQuery = ref("");
+
+// Modals
 const showTopUpModal = ref(false);
 const showAddUserModal = ref(false);
 const selectedUser = ref(null);
 const topUpAmount = ref("");
+
+// Forms
 const promoForm = reactive({ code: "", value: "", type: "percent" });
 const addUserForm = reactive({ name: "", email: "", role: "member", saldo: 0 });
 
+// Computed Data (Safe Access)
 const stats = computed(
     () =>
         userStore.adminStats || {
@@ -60,6 +66,7 @@ const formatRupiah = (val) =>
         maximumFractionDigits: 0,
     }).format(val || 0);
 
+// Actions
 onMounted(async () => {
     await userStore.fetchAllUsers();
     await promoStore.fetchAllPromos();
@@ -70,63 +77,81 @@ const openTopUpModal = (user) => {
     topUpAmount.value = "";
     showTopUpModal.value = true;
 };
+
 const processTopUp = async () => {
     if (!topUpAmount.value || topUpAmount.value <= 0)
         return alert("Nominal invalid!");
-    if (
-        !confirm(
-            `Isi saldo ${formatRupiah(topUpAmount.value)} ke ${selectedUser.value.displayName}?`,
-        )
-    )
-        return;
-    if (
-        await userStore.adminTopUpUser(
-            selectedUser.value.id,
-            parseInt(topUpAmount.value),
-        )
-    )
+    const confirmMsg = `Isi saldo ${formatRupiah(topUpAmount.value)} ke ${selectedUser.value.displayName}?`;
+    if (!confirm(confirmMsg)) return;
+
+    const success = await userStore.adminTopUpUser(
+        selectedUser.value.id,
+        parseInt(topUpAmount.value),
+    );
+    if (success) {
         showTopUpModal.value = false;
-};
-const handleDeleteUser = async (user) => {
-    if (confirm(`Hapus ${user.displayName}?`))
-        await userStore.adminDeleteUser(user.id);
-};
-const handleChangeRole = async (user, newRole) => {
-    if (user.role !== newRole && confirm(`Ubah role ke ${newRole}?`))
-        await userStore.adminUpdateUserRole(user.id, newRole);
-};
-const handleAddUser = async () => {
-    if (!addUserForm.name || !addUserForm.email) return alert("Wajib diisi!");
-    if (
-        await userStore.adminCreateMemberData(
-            addUserForm.email,
-            addUserForm.name,
-            addUserForm.role,
-            addUserForm.saldo,
-        )
-    ) {
-        showAddUserModal.value = false;
-        addUserForm.name = "";
-        addUserForm.email = "";
-        alert("Berhasil!");
+        alert("Top Up Berhasil! 🚀");
     }
 };
+
+const handleDeleteUser = async (user) => {
+    const confirmMsg = `⚠️ Yakin ingin menghapus member ${user.displayName}? \nData saldo & history akan hilang permanen!`;
+    if (!confirm(confirmMsg)) return;
+    await userStore.adminDeleteUser(user.id);
+};
+
+const handleChangeRole = async (user, newRole) => {
+    if (user.role === newRole) return;
+    if (!confirm(`Ubah role ${user.displayName} menjadi ${newRole}?`)) return;
+    await userStore.adminUpdateUserRole(user.id, newRole);
+};
+
+const handleAddUser = async () => {
+    if (!addUserForm.name || !addUserForm.email)
+        return alert("Nama & Email wajib diisi!");
+
+    // Panggil fungsi create yang mengembalikan password default
+    const result = await userStore.adminCreateMemberData(
+        addUserForm.email,
+        addUserForm.name,
+        addUserForm.role,
+        addUserForm.saldo,
+    );
+
+    if (result.success) {
+        showAddUserModal.value = false;
+
+        // Tampilkan info password ke Admin agar bisa di-share
+        alert(
+            `✅ Member Berhasil Dibuat!\n\nLogin: ${result.email}\nPassword Default: ${result.password}\n\nSilakan berikan info ini ke member.`,
+        );
+
+        // Reset Form
+        addUserForm.name = "";
+        addUserForm.email = "";
+        addUserForm.saldo = 0;
+    } else {
+        alert("Gagal membuat member: " + result.error);
+    }
+};
+
 const handleCreatePromo = async () => {
     if (!promoForm.code || !promoForm.value) return alert("Lengkapi data!");
-    if (
-        await promoStore.createPromo(
-            promoForm.code,
-            promoForm.value,
-            promoForm.type,
-        )
-    ) {
+    const success = await promoStore.createPromo(
+        promoForm.code,
+        promoForm.value,
+        promoForm.type,
+    );
+    if (success) {
         promoForm.code = "";
         promoForm.value = "";
     }
 };
+
 const handleDeletePromo = async (code) => {
     if (confirm(`Hapus promo ${code}?`)) await promoStore.deletePromo(code);
 };
+
 const handleLogout = async () => {
     await userStore.logout();
     router.push("/");
@@ -143,16 +168,17 @@ const handleLogout = async () => {
             >
                 <div class="p-6 flex items-center gap-3">
                     <div
-                        class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center text-white font-black text-lg"
+                        class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-black text-lg shadow-lg"
                     >
                         A
                     </div>
-                    <div>
+                    <div class="leading-tight">
                         <span
-                            class="text-lg font-bold text-slate-900 dark:text-white"
+                            class="text-lg font-bold tracking-tight text-slate-900 dark:text-white"
                             >Admin</span
-                        ><span
-                            class="text-[10px] block font-bold text-slate-400 uppercase"
+                        >
+                        <span
+                            class="text-[10px] block font-medium text-slate-400 uppercase tracking-widest"
                             >Dashboard</span
                         >
                     </div>
@@ -160,7 +186,7 @@ const handleLogout = async () => {
                 <nav class="flex-1 px-3 space-y-2 mt-6">
                     <button
                         @click="activeTab = 'dashboard'"
-                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
                         :class="
                             activeTab === 'dashboard'
                                 ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white'
@@ -171,7 +197,7 @@ const handleLogout = async () => {
                     </button>
                     <button
                         @click="activeTab = 'users'"
-                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
                         :class="
                             activeTab === 'users'
                                 ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white'
@@ -182,7 +208,7 @@ const handleLogout = async () => {
                     </button>
                     <button
                         @click="activeTab = 'promos'"
-                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
                         :class="
                             activeTab === 'promos'
                                 ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white'
@@ -193,17 +219,17 @@ const handleLogout = async () => {
                     </button>
                 </nav>
                 <div
-                    class="p-3 pt-4 border-t border-slate-100 dark:border-white/5"
+                    class="p-3 space-y-2 border-t border-slate-100 dark:border-white/5 pt-4"
                 >
                     <button
                         @click="router.push('/')"
-                        class="w-full flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-sky-500 font-bold rounded-xl transition"
+                        class="w-full flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-sky-500 transition rounded-xl font-bold"
                     >
                         <ArrowLeft :size="20" /> Ke Toko
                     </button>
                     <button
                         @click="handleLogout"
-                        class="w-full flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-rose-500 font-bold rounded-xl transition"
+                        class="w-full flex items-center gap-3 px-3 py-3 text-slate-400 hover:text-rose-500 transition rounded-xl font-bold"
                     >
                         <LogOut :size="20" /> Logout
                     </button>
@@ -263,6 +289,7 @@ const handleLogout = async () => {
                     </button>
                 </div>
             </header>
+
             <button
                 v-if="activeTab === 'users'"
                 @click="showAddUserModal = true"
@@ -527,7 +554,7 @@ const handleLogout = async () => {
                         class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] shadow-sm border border-slate-100 dark:border-slate-700 h-fit"
                     >
                         <h3
-                            class="text-lg font-bold text-slate-800 dark:text-white mb-4"
+                            class="text-lg font-bold text-slate-900 dark:text-white mb-4"
                         >
                             Buat Promo
                         </h3>
@@ -571,7 +598,7 @@ const handleLogout = async () => {
                             />
                             <button
                                 @click="handleCreatePromo"
-                                class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition"
+                                class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition btn-bouncy"
                             >
                                 Simpan
                             </button>
@@ -618,60 +645,6 @@ const handleLogout = async () => {
             </div>
         </main>
 
-        <div
-            class="lg:hidden fixed bottom-0 w-full bg-white/90 dark:bg-slate-900/90 backdrop-blur-lg border-t border-slate-200 dark:border-white/10 pb-safe z-50"
-        >
-            <div class="flex justify-around items-center h-16">
-                <button
-                    @click="activeTab = 'dashboard'"
-                    class="flex flex-col items-center gap-1 p-2 w-16"
-                    :class="
-                        activeTab === 'dashboard'
-                            ? 'text-indigo-600 dark:text-white'
-                            : 'text-slate-400'
-                    "
-                >
-                    <LayoutGrid :size="20" /><span class="text-[10px] font-bold"
-                        >Home</span
-                    >
-                </button>
-                <button
-                    @click="activeTab = 'users'"
-                    class="flex flex-col items-center gap-1 p-2 w-16"
-                    :class="
-                        activeTab === 'users'
-                            ? 'text-indigo-600 dark:text-white'
-                            : 'text-slate-400'
-                    "
-                >
-                    <Users :size="20" /><span class="text-[10px] font-bold"
-                        >Users</span
-                    >
-                </button>
-                <button
-                    @click="activeTab = 'promos'"
-                    class="flex flex-col items-center gap-1 p-2 w-16"
-                    :class="
-                        activeTab === 'promos'
-                            ? 'text-indigo-600 dark:text-white'
-                            : 'text-slate-400'
-                    "
-                >
-                    <Tag :size="20" /><span class="text-[10px] font-bold"
-                        >Promo</span
-                    >
-                </button>
-                <button
-                    @click="router.push('/')"
-                    class="flex flex-col items-center gap-1 p-2 w-16 text-slate-400"
-                >
-                    <ArrowLeft :size="20" /><span class="text-[10px] font-bold"
-                        >Exit</span
-                    >
-                </button>
-            </div>
-        </div>
-
         <transition name="fade">
             <div
                 v-if="showTopUpModal"
@@ -701,7 +674,7 @@ const handleLogout = async () => {
                     <input
                         v-model="topUpAmount"
                         type="number"
-                        class="w-full px-4 py-4 rounded-2xl bg-slate-100 dark:bg-black/20 border-none font-black text-2xl text-center focus:ring-2 focus:ring-indigo-500 transition text-slate-800 dark:text-white mb-6"
+                        class="w-full px-4 py-4 rounded-2xl bg-slate-100 dark:bg-black/20 border-none font-black text-2xl text-center focus:ring-2 focus:ring-indigo-500 transition text-slate-900 dark:text-white mb-6"
                         placeholder="0"
                     />
                     <div class="flex gap-2">
@@ -734,7 +707,7 @@ const handleLogout = async () => {
                     class="bg-white dark:bg-slate-800 w-full max-w-sm rounded-[2rem] shadow-2xl relative z-10 p-6 animate-in zoom-in-95 border border-white/20"
                 >
                     <h3
-                        class="text-xl font-black mb-6 text-slate-800 dark:text-white flex items-center gap-2"
+                        class="text-xl font-black mb-6 text-slate-900 dark:text-white flex items-center gap-2"
                     >
                         <UserPlus :size="24" class="text-indigo-500" /> Tambah
                         Member
@@ -744,7 +717,7 @@ const handleLogout = async () => {
                             v-model="addUserForm.email"
                             type="email"
                             class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-black/20 border-none font-bold focus:ring-2 focus:ring-indigo-500 text-slate-700 dark:text-white"
-                            placeholder="Email (Wajib)"
+                            placeholder="user@mail.com"
                         />
                         <input
                             v-model="addUserForm.name"
@@ -771,17 +744,3 @@ const handleLogout = async () => {
         </transition>
     </div>
 </template>
-
-<style scoped>
-.pb-safe {
-    padding-bottom: env(safe-area-inset-bottom);
-}
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.2s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
-}
-</style>

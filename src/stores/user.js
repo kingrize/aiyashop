@@ -1,12 +1,15 @@
 // LOKASI FILE: src/stores/user.js
 import { defineStore } from "pinia";
-import { auth, db } from "../firebase";
+import { auth, db, firebaseConfig } from "../firebase"; // Pastikan firebaseConfig di-export di src/firebase.js
+import { initializeApp, deleteApp } from "firebase/app";
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
   updateProfile,
+  getAuth,
+  updatePassword,
 } from "firebase/auth";
 import {
   doc,
@@ -33,7 +36,7 @@ export const useUserStore = defineStore("user", {
     authError: null,
     showAuthModal: false,
 
-    // ADMIN STATE
+    // STATE ADMIN
     allUsers: [],
   }),
 
@@ -60,8 +63,7 @@ export const useUserStore = defineStore("user", {
       this.showAuthModal = value;
     },
 
-    // --- ADMIN ACTIONS ---
-
+    // --- ADMIN: FETCH ALL USERS ---
     async fetchAllUsers() {
       if (!this.isAdmin) return;
       try {
@@ -76,6 +78,66 @@ export const useUserStore = defineStore("user", {
       }
     },
 
+    // --- ADMIN: CREATE MEMBER (Secondary App Technical Trick) ---
+    async adminCreateMemberData(
+      rawEmail,
+      name,
+      role = "member",
+      initialSaldo = 0,
+    ) {
+      if (!this.isAdmin) return;
+
+      // 1. Password Default Baru
+      const defaultPassword = "aiyashop123";
+      let secondaryApp = null;
+
+      // 2. Sanitasi Email
+      let email = rawEmail.trim();
+      if (!email.includes("@")) {
+        email = `${email}@aiyashop.com`;
+      }
+
+      try {
+        // 3. Init Secondary App
+        secondaryApp = initializeApp(firebaseConfig, "SecondaryApp");
+        const secondaryAuth = getAuth(secondaryApp);
+
+        // 4. Create Auth User
+        const userCredential = await createUserWithEmailAndPassword(
+          secondaryAuth,
+          email,
+          defaultPassword,
+        );
+        const newUserUid = userCredential.user.uid;
+
+        // 5. Create Firestore Data
+        const newUserData = {
+          email,
+          displayName: name,
+          role,
+          saldo: initialSaldo,
+          totalTopUp: initialSaldo,
+          joinedAt: new Date(),
+          isManualEntry: true,
+          defaultPassword: defaultPassword,
+        };
+
+        await setDoc(doc(db, "users", newUserUid), newUserData);
+
+        // 6. Cleanup Secondary App
+        await signOut(secondaryAuth);
+        deleteApp(secondaryApp);
+
+        await this.fetchAllUsers(); // Refresh list user
+        return { success: true, password: defaultPassword, email: email };
+      } catch (error) {
+        console.error("Gagal buat member:", error);
+        if (secondaryApp) deleteApp(secondaryApp);
+        return { success: false, error: error.message };
+      }
+    },
+
+    // --- ADMIN: UPDATE ROLE ---
     async adminUpdateUserRole(targetUid, newRole) {
       if (!this.isAdmin) return;
       try {
@@ -88,18 +150,12 @@ export const useUserStore = defineStore("user", {
       }
     },
 
-    // FITUR BARU: HAPUS USER
+    // --- ADMIN: DELETE USER ---
     async adminDeleteUser(targetUid) {
       if (!this.isAdmin) return;
       try {
-        // Hapus dokumen data user dari Firestore
         await deleteDoc(doc(db, "users", targetUid));
-
-        // Catatan: Ini tidak menghapus user dari Authentication (Login),
-        // karena itu butuh Admin SDK (Backend).
-        // Tapi dengan menghapus data di Firestore, user tersebut akan error/kosong saat login.
-
-        await this.fetchAllUsers(); // Refresh list
+        await this.fetchAllUsers();
         return true;
       } catch (error) {
         console.error("Gagal hapus user:", error);
@@ -107,32 +163,7 @@ export const useUserStore = defineStore("user", {
       }
     },
 
-    async adminCreateMemberData(
-      email,
-      name,
-      role = "member",
-      initialSaldo = 0,
-    ) {
-      if (!this.isAdmin) return;
-      try {
-        await addDoc(collection(db, "users"), {
-          email,
-          displayName: name,
-          role,
-          saldo: initialSaldo,
-          totalTopUp: initialSaldo,
-          joinedAt: new Date(),
-          isManualEntry: true,
-          note: "Dibuat oleh admin",
-        });
-        await this.fetchAllUsers();
-        return true;
-      } catch (error) {
-        console.error("Gagal buat member:", error);
-        return false;
-      }
-    },
-
+    // --- ADMIN: TOP UP ---
     async adminTopUpUser(targetUid, amount) {
       if (!this.isAdmin) return;
       try {
@@ -141,6 +172,7 @@ export const useUserStore = defineStore("user", {
           saldo: increment(amount),
           totalTopUp: increment(amount),
         });
+        // Catat history
         await addDoc(collection(db, "users", targetUid, "transactions"), {
           type: "income",
           title: "Top Up Admin",
@@ -157,7 +189,7 @@ export const useUserStore = defineStore("user", {
       }
     },
 
-    // --- AUTH ACTIONS ---
+    // --- AUTH STANDARD ---
     async login(username, password) {
       this.authError = null;
       try {
@@ -179,7 +211,7 @@ export const useUserStore = defineStore("user", {
       }
     },
 
-    // Fungsi Register tetap ada di store (untuk jaga-jaga), tapi tidak dipanggil di UI Cart
+    // Register biasa (User Mandiri - Opsional jika dipakai)
     async register(name, email, password) {
       this.authError = null;
       try {
@@ -215,6 +247,22 @@ export const useUserStore = defineStore("user", {
       this.allUsers = [];
     },
 
+    async changePassword(newPassword) {
+      if (!this.user) return { success: false, message: "Belum login" };
+      try {
+        await updatePassword(this.user, newPassword);
+        return { success: true };
+      } catch (error) {
+        if (error.code === "auth/requires-recent-login") {
+          return {
+            success: false,
+            message: "Sesi habis. Silakan logout & login ulang dulu.",
+          };
+        }
+        return { success: false, message: error.message };
+      }
+    },
+
     async fetchMemberData() {
       if (!this.user) return;
       const docRef = doc(db, "users", this.user.uid);
@@ -224,6 +272,7 @@ export const useUserStore = defineStore("user", {
         if (data.totalTopUp === undefined) data.totalTopUp = data.saldo || 0;
         this.memberData = data;
       } else {
+        // Auto-fix data jika tidak ada di firestore
         const tempName = this.user.email.split("@")[0];
         const formattedName =
           tempName.charAt(0).toUpperCase() + tempName.slice(1);
@@ -299,6 +348,8 @@ export const useUserStore = defineStore("user", {
           return "Username/Password salah.";
         case "auth/email-already-in-use":
           return "Username sudah dipakai.";
+        case "auth/requires-recent-login":
+          return "Silakan login ulang untuk keamanan.";
         default:
           return "Gagal masuk/daftar.";
       }
