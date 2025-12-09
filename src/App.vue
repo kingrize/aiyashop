@@ -1,18 +1,17 @@
 <script setup>
 import { ref, provide } from "vue";
-import { RouterView } from "vue-router";
+import { RouterView, useRoute } from "vue-router"; // Import useRoute
 import { Cloud } from "lucide-vue-next";
 
-// Import Semua Komponen Global
 import Navbar from "./components/Navbar.vue";
-import Footer from "./components/Footer.vue"; // Pastikan file ini ada
-import BottomNav from "./components/BottomNav.vue"; // Pastikan file ini ada
+import Footer from "./components/Footer.vue";
+import BottomNav from "./components/BottomNav.vue";
 import CartDrawer from "./components/CartDrawer.vue";
 import Toast from "./components/Toast.vue";
 
 const isLoading = ref(false);
+const route = useRoute(); // Init route
 
-// Provide fungsi loading ke semua child component
 provide("globalLoading", {
     start: () => (isLoading.value = true),
     finish: () => (isLoading.value = false),
@@ -21,7 +20,8 @@ provide("globalLoading", {
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col pb-20 md:pb-0 transition-colors duration-300"
+        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col transition-colors duration-300"
+        :class="{ 'pb-20 md:pb-0': !route.path.includes('/admin') }"
     >
         <transition name="fade">
             <div
@@ -46,7 +46,7 @@ provide("globalLoading", {
             </div>
         </transition>
 
-        <Navbar />
+        <Navbar v-if="!route.path.includes('/admin')" />
 
         <main class="flex-1">
             <router-view v-slot="{ Component }">
@@ -56,9 +56,8 @@ provide("globalLoading", {
             </router-view>
         </main>
 
-        <Footer />
-
-        <BottomNav />
+        <Footer v-if="!route.path.includes('/admin')" />
+        <BottomNav v-if="!route.path.includes('/admin')" />
 
         <CartDrawer />
         <Toast />
@@ -66,7 +65,6 @@ provide("globalLoading", {
 </template>
 
 <style scoped>
-/* Transisi Global Loader */
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;
@@ -75,8 +73,6 @@ provide("globalLoading", {
 .fade-leave-to {
     opacity: 0;
 }
-
-/* Transisi Halaman yang Halus */
 .page-fade-enter-active,
 .page-fade-leave-active {
     transition:
