@@ -316,7 +316,7 @@ onUnmounted(() => {
 }
 
 @keyframes ping-slow {
-    74%,
+    75%,
     100% {
         transform: scale(2);
         opacity: 0;
