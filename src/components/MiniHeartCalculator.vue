@@ -10,6 +10,7 @@ import {
     Gift,
     CheckCircle2,
     Info,
+    AlertTriangle,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -36,7 +37,7 @@ const minSlots = computed(() => config.value.minSlots ?? 1);
 const maxSlots = computed(() => config.value.maxSlots ?? 20);
 const slots = ref(5);
 
-const pricePerHeart = computed(() => config.value.pricePerHeart ?? 100);
+const pricePerHeart = computed(() => config.value.pricePerHeart ?? 150); // Default 150
 
 const formatCurrency = (value) =>
     new Intl.NumberFormat("id-ID", {
@@ -45,7 +46,7 @@ const formatCurrency = (value) =>
         maximumFractionDigits: 0,
     }).format(value || 0);
 
-// BONUS LOGIC (Hanya Daily)
+// BONUS LOGIC
 const bonusHearts = computed(() => {
     if (!hasBonus.value || heartCount.value <= 0) return 0;
     const paket50 = Math.floor(heartCount.value / 50);
@@ -74,7 +75,6 @@ const increaseHearts = () => {
     if (heartCount.value > maxHearts.value) heartCount.value = maxHearts.value;
 };
 
-// Handle manual input typing
 const handleInput = (e) => {
     let val = parseInt(e.target.value);
     if (isNaN(val)) return;
@@ -150,7 +150,6 @@ const handleAddToCart = () => {
                 >
                     <Minus :size="24" />
                 </button>
-
                 <div class="flex-1 relative group">
                     <input
                         type="number"
@@ -168,7 +167,6 @@ const handleAddToCart = () => {
                         />
                     </div>
                 </div>
-
                 <button
                     @click="increaseHearts"
                     class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-500 dark:hover:border-emerald-500 transition active:scale-95 shadow-sm"
@@ -213,6 +211,31 @@ const handleAddToCart = () => {
                 :max="maxSlots"
                 class="w-full h-3 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all border border-slate-200 dark:border-slate-600"
             />
+
+            <div
+                class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800 flex gap-3 items-start"
+            >
+                <AlertTriangle
+                    :size="18"
+                    class="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"
+                />
+                <div class="space-y-1">
+                    <p
+                        class="text-xs font-bold text-amber-800 dark:text-amber-300"
+                    >
+                        Info Perubahan Harga (150/heart)
+                    </p>
+                    <p
+                        class="text-[11px] text-amber-700 dark:text-amber-400/80 leading-relaxed"
+                    >
+                        TGC mengubah kebijakan:
+                        <b>Akun Guest tidak bisa lagi kirim heart</b> (Wajib
+                        linked Gmail/Nintendo). <br />Hal ini membuat proses
+                        pembuatan akun bot jauh lebih sulit & mahal. Terima
+                        kasih pengertiannya 🙏
+                    </p>
+                </div>
+            </div>
 
             <div
                 class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800 flex gap-3 items-start"

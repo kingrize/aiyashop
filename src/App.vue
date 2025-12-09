@@ -1,16 +1,18 @@
 <script setup>
 import { ref, provide } from "vue";
-import { RouterView, useRoute } from "vue-router"; // Import useRoute
+import { RouterView, useRoute } from "vue-router";
 import { Cloud } from "lucide-vue-next";
 
+// Import Komponen Global
 import Navbar from "./components/Navbar.vue";
 import Footer from "./components/Footer.vue";
 import BottomNav from "./components/BottomNav.vue";
 import CartDrawer from "./components/CartDrawer.vue";
 import Toast from "./components/Toast.vue";
+import GlobalBanner from "./components/GlobalBanner.vue";
 
 const isLoading = ref(false);
-const route = useRoute(); // Init route
+const route = useRoute();
 
 provide("globalLoading", {
     start: () => (isLoading.value = true),
@@ -20,7 +22,7 @@ provide("globalLoading", {
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col transition-colors duration-300"
+        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col transition-colors duration-300 overflow-x-hidden"
         :class="{ 'pb-20 md:pb-0': !route.path.includes('/admin') }"
     >
         <transition name="fade">
@@ -46,9 +48,11 @@ provide("globalLoading", {
             </div>
         </transition>
 
+        <GlobalBanner v-if="!route.path.includes('/admin')" />
+
         <Navbar v-if="!route.path.includes('/admin')" />
 
-        <main class="flex-1">
+        <main class="flex-1 w-full">
             <router-view v-slot="{ Component }">
                 <transition name="page-fade" mode="out-in">
                     <component :is="Component" />

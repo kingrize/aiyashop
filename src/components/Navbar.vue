@@ -15,8 +15,11 @@ import {
     Moon,
     User,
     X,
+    Settings,
 } from "lucide-vue-next";
+import { useRouter } from "vue-router";
 
+const router = useRouter();
 const cart = useCartStore();
 const userStore = useUserStore();
 const themeStore = useThemeStore();
@@ -24,10 +27,16 @@ const themeStore = useThemeStore();
 const totalItems = computed(() => cart.totalItems);
 const isScrolled = ref(false);
 const showProfileMenu = ref(false);
-// const showAuthModal = ref(false); // HAPUS INI, GANTI DENGAN STORE
-
 const authForm = reactive({ username: "", password: "" });
 const isAuthLoading = ref(false);
+
+// --- STATE ALERT IOS ---
+const alertState = reactive({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+});
 
 const handleScroll = () => {
     isScrolled.value = window.scrollY > 20;
@@ -48,6 +57,26 @@ const memberName = computed(() => {
     return "Kakak";
 });
 
+// --- FUNGSI KE SETTINGS ---
+const goToSettings = () => {
+    showProfileMenu.value = false;
+    router.push("/member/settings");
+};
+
+// --- FUNGSI LOGOUT DENGAN KONFIRMASI IOS ---
+const confirmLogout = () => {
+    showProfileMenu.value = false; // Tutup dropdown menu
+
+    alertState.title = "Keluar Akun?";
+    alertState.message =
+        "Kamu harus login lagi nanti untuk mengakses fitur member.";
+    alertState.isOpen = true;
+    alertState.onConfirm = async () => {
+        await userStore.logout();
+        alertState.isOpen = false;
+    };
+};
+
 const handleNavbarAuth = async () => {
     if (!authForm.username || !authForm.password) {
         alert("Username & Password wajib diisi!");
@@ -57,7 +86,7 @@ const handleNavbarAuth = async () => {
     const success = await userStore.login(authForm.username, authForm.password);
     isAuthLoading.value = false;
     if (success) {
-        userStore.toggleAuthModal(false); // TUTUP PAKE STORE
+        userStore.toggleAuthModal(false);
         authForm.username = "";
         authForm.password = "";
     }
@@ -135,6 +164,7 @@ const formatRupiah = (val) =>
                 <div
                     class="h-5 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"
                 ></div>
+
                 <button
                     @click="themeStore.toggleTheme"
                     class="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 hover:text-amber-500 hover:border-amber-300 hover:bg-amber-50 transition btn-bouncy dark:bg-slate-800 dark:border-slate-700 dark:hover:text-amber-300 dark:hover:bg-slate-700"
@@ -197,11 +227,16 @@ const formatRupiah = (val) =>
                                 {{ formatRupiah(userStore.memberData?.saldo) }}
                             </p>
                         </div>
+
                         <button
-                            @click="
-                                userStore.logout();
-                                showProfileMenu = false;
-                            "
+                            @click="goToSettings"
+                            class="w-full text-left px-5 py-3 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2 transition-colors border-b border-slate-50 dark:border-slate-700"
+                        >
+                            <Settings :size="16" /> Pengaturan
+                        </button>
+
+                        <button
+                            @click="confirmLogout"
                             class="w-full text-left px-5 py-3 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center gap-2 transition-colors"
                         >
                             <LogOut :size="16" /> Keluar
@@ -326,6 +361,52 @@ const formatRupiah = (val) =>
                 </div>
             </div>
         </transition>
+
+        <Teleport to="body">
+            <transition name="fade">
+                <div
+                    v-if="alertState.isOpen"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                >
+                    <div
+                        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
+                        @click="alertState.isOpen = false"
+                    ></div>
+                    <div
+                        class="bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl w-full max-w-[270px] rounded-[18px] shadow-2xl relative z-10 overflow-hidden text-center animate-in zoom-in-105 duration-200"
+                    >
+                        <div class="p-5 pb-5">
+                            <h3
+                                class="text-[17px] font-bold text-slate-900 dark:text-white mb-1 leading-snug"
+                            >
+                                {{ alertState.title }}
+                            </h3>
+                            <p
+                                class="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed"
+                            >
+                                {{ alertState.message }}
+                            </p>
+                        </div>
+                        <div
+                            class="flex border-t border-slate-200/50 dark:border-white/10 divide-x divide-slate-200/50 dark:divide-white/10"
+                        >
+                            <button
+                                @click="alertState.isOpen = false"
+                                class="flex-1 py-3.5 text-[17px] font-normal text-blue-500 hover:bg-slate-50 dark:hover:bg-white/5 transition active:opacity-70"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                @click="alertState.onConfirm"
+                                class="flex-1 py-3.5 text-[17px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition active:opacity-70"
+                            >
+                                Keluar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
+        </Teleport>
     </header>
 </template>
 

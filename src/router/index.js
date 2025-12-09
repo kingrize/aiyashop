@@ -1,6 +1,6 @@
 // LOKASI FILE: src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
-import { useUserStore } from "../stores/user"; // Pastikan ini ada
+import { useUserStore } from "../stores/user";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,25 +9,27 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: () => import("../views/HomeView.vue"),
-      meta: {
-        title: "AiyaShop - Jasa Joki Sky: Children of the Light",
-      },
+      meta: { title: "AiyaShop - Jasa Joki Sky: Children of the Light" },
     },
     {
       path: "/join-member",
       name: "join-member",
       component: () => import("../views/JoinMemberView.vue"),
-      meta: {
-        title: "Join Member Premium",
-      },
+      meta: { title: "Join Member Premium" },
     },
     {
       path: "/top-up",
       name: "top-up",
       component: () => import("../views/TopUpView.vue"),
-      meta: {
-        title: "Isi Saldo Member",
-      },
+      meta: { title: "Isi Saldo Member" },
+    },
+
+    // --- RUTE BARU: MEMBER SETTINGS ---
+    {
+      path: "/member/settings",
+      name: "member-settings",
+      component: () => import("../views/member/MemberSettings.vue"),
+      meta: { title: "Pengaturan Akun" },
     },
 
     // --- ADMIN ROUTE ---
@@ -41,14 +43,12 @@ const router = createRouter({
       },
     },
 
-    // 404 (Wajib Paling Bawah)
+    // 404
     {
       path: "/:pathMatch(.*)*",
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
-      meta: {
-        title: "404 OOB - Tersesat?",
-      },
+      meta: { title: "404 OOB - Tersesat?" },
     },
   ],
   scrollBehavior(to, from, savedPosition) {
@@ -62,10 +62,8 @@ const router = createRouter({
 // --- NAVIGATION GUARD ---
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-
   document.title = to.meta.title || "AiyaShop";
 
-  // Tunggu Firebase Loading
   if (userStore.loading) {
     await new Promise((resolve) => {
       const unsubscribe = userStore.$subscribe((mutation, state) => {
@@ -90,5 +88,4 @@ router.beforeEach(async (to, from, next) => {
   next();
 });
 
-// !!! BAGIAN INI SANGAT PENTING JANGAN SAMPAI HILANG !!!
 export default router;

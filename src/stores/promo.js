@@ -15,10 +15,9 @@ export const usePromoStore = defineStore("promo", {
     activeCode: null,
     discountAmount: 0,
     discountType: null,
+    minOrder: 0, // State baru
     isLoading: false,
     error: null,
-
-    // STATE ADMIN
     allPromos: [],
   }),
   actions: {
@@ -31,19 +30,19 @@ export const usePromoStore = defineStore("promo", {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const data = docSnap.data();
-          if (data.isActive === false)
-            throw new Error("Kode ini sedang non-aktif ⏸️");
+          if (data.isActive === false) throw new Error("Kode ini non-aktif ⏸️");
 
           this.activeCode = code.toUpperCase();
           this.discountAmount = data.value;
-          this.discountType = data.type; // 'fixed' atau 'percent'
+          this.discountType = data.type;
+          this.minOrder = data.minOrder || 0; // Load minimal order
 
           return {
             success: true,
-            message: `Kode ${code} dipakai! Hemat ${this.formatDiscount(data)}`,
+            message: `Kode dipakai! Hemat ${this.formatDiscount(data)}`,
           };
         } else {
-          throw new Error("Kode promo tidak ditemukan 🔍");
+          throw new Error("Kode tidak ditemukan 🔍");
         }
       } catch (err) {
         this.error = err.message;
@@ -58,6 +57,7 @@ export const usePromoStore = defineStore("promo", {
       this.activeCode = null;
       this.discountAmount = 0;
       this.discountType = null;
+      this.minOrder = 0;
     },
 
     // --- ADMIN ACTIONS ---
@@ -73,16 +73,18 @@ export const usePromoStore = defineStore("promo", {
       }
     },
 
-    async createPromo(code, value, type) {
+    // UPDATE: Terima parameter minOrder
+    async createPromo(code, value, type, minOrder = 0) {
       if (!code || !value) return false;
       try {
         await setDoc(doc(db, "promos", code.toUpperCase()), {
           value: Number(value),
-          type: type, // 'fixed' | 'percent'
+          type: type,
+          minOrder: Number(minOrder), // Simpan ke DB
           isActive: true,
           createdAt: new Date(),
         });
-        await this.fetchAllPromos(); // Refresh list
+        await this.fetchAllPromos();
         return true;
       } catch (error) {
         console.error("Gagal buat promo:", error);
@@ -96,12 +98,11 @@ export const usePromoStore = defineStore("promo", {
         await this.fetchAllPromos();
         return true;
       } catch (error) {
-        console.error("Gagal hapus promo:", error);
+        console.error("Gagal hapus:", error);
         return false;
       }
     },
 
-    // Helper Format
     formatDiscount(promo) {
       if (promo.type === "percent") return `${promo.value}%`;
       return new Intl.NumberFormat("id-ID", {
@@ -114,6 +115,9 @@ export const usePromoStore = defineStore("promo", {
   getters: {
     calculateTotal: (state) => (subtotal) => {
       if (!state.activeCode) return subtotal;
+      // Validasi Min Order
+      if (subtotal < state.minOrder) return subtotal;
+
       let discount = 0;
       if (state.discountType === "fixed") discount = state.discountAmount;
       else if (state.discountType === "percent")
@@ -122,6 +126,9 @@ export const usePromoStore = defineStore("promo", {
     },
     savings: (state) => (subtotal) => {
       if (!state.activeCode) return 0;
+      // Validasi Min Order
+      if (subtotal < state.minOrder) return 0;
+
       if (state.discountType === "fixed") return state.discountAmount;
       return (subtotal * state.discountAmount) / 100;
     },

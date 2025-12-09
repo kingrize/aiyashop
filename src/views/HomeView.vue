@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick } from "vue";
+import { ref, computed, nextTick, reactive } from "vue";
 import { products } from "../data/products";
 import { useUserStore } from "../stores/user";
 import ProductCard from "../components/ProductCard.vue";
@@ -27,6 +27,8 @@ import {
     History,
     Sparkles,
     LogOut,
+    CheckCircle2,
+    Settings,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
@@ -45,20 +47,20 @@ const isEditingName = ref(false);
 const newNameInput = ref("");
 const nameInputRef = ref(null);
 
+// IOS ALERT STATE
+const alertState = reactive({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+});
+
 const timeGreeting = computed(() => {
     const hour = new Date().getHours();
     if (hour < 11) return "Selamat Pagi";
     if (hour < 15) return "Selamat Siang";
     if (hour < 18) return "Selamat Sore";
     return "Selamat Malam";
-});
-
-const nextLevelProgress = computed(() => {
-    const total = userStore.memberData?.totalTopUp || 0;
-    if (total > 1000000) return 100;
-    if (total > 500000) return ((total - 500000) / 500000) * 100;
-    if (total > 100000) return ((total - 100000) / 400000) * 100;
-    return (total / 100000) * 100;
 });
 
 const filteredProducts = computed(() => {
@@ -97,13 +99,23 @@ const saveName = async () => {
     isEditingName.value = false;
 };
 
-// --- LOGIKA BARU TOP UP (REDIRECT) ---
+// ACTIONS
 const handleTopUp = () => {
     router.push("/top-up");
 };
-
 const handleJoinMember = () => {
     router.push("/join-member");
+};
+
+// LOGOUT WITH ALERT
+const confirmLogout = () => {
+    alertState.title = "Keluar Akun?";
+    alertState.message = "Yakin ingin keluar? Sesi loginmu akan berakhir.";
+    alertState.isOpen = true;
+    alertState.onConfirm = async () => {
+        await userStore.logout();
+        alertState.isOpen = false;
+    };
 };
 
 const openProductDetail = (product) => {
@@ -120,28 +132,28 @@ const categories = [
 
 const steps = [
     {
-        title: "Pilih & Checkout",
-        desc: "Pilih paket, lalu checkout via WA.",
+        title: "1. Pilih Paket",
+        desc: "Pilih produk yang kamu mau.",
         icon: Sparkles,
-        color: "bg-sky-100 text-sky-500 dark:bg-sky-900/30 dark:text-sky-400",
+        color: "text-sky-500 bg-sky-100 dark:bg-sky-900/30",
     },
     {
-        title: "Kirim Data (Aman)",
-        desc: "Kirim data login via link khusus.",
+        title: "2. Kirim Data",
+        desc: "Login via Link/QR (Aman 100%).",
         icon: Lock,
-        color: "bg-rose-100 text-rose-500 dark:bg-rose-900/30 dark:text-rose-400",
+        color: "text-rose-500 bg-rose-100 dark:bg-rose-900/30",
     },
     {
-        title: "Proses Joki",
-        desc: "Admin login & kerjakan pesanan.",
+        title: "3. Proses Joki",
+        desc: "Admin mengerjakan pesanan.",
         icon: Clock,
-        color: "bg-amber-100 text-amber-500 dark:bg-amber-900/30 dark:text-amber-400",
+        color: "text-amber-500 bg-amber-100 dark:bg-amber-900/30",
     },
     {
-        title: "Selesai!",
-        desc: "Dapet bukti SS, akun logout & happy!",
-        icon: Gift,
-        color: "bg-emerald-100 text-emerald-500 dark:bg-emerald-900/30 dark:text-emerald-400",
+        title: "4. Selesai!",
+        desc: "Terima bukti & bisa login lagi.",
+        icon: CheckCircle2,
+        color: "text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30",
     },
 ];
 
@@ -199,17 +211,6 @@ const faqs = [
                         <div
                             class="absolute inset-4 border border-dashed border-indigo-300/30 dark:border-white/10 rounded-full animate-spin-reverse-slow scale-110"
                         ></div>
-
-                        <div
-                            class="absolute top-0 right-10 w-2 h-2 bg-amber-300 rounded-full blur-[1px] animate-float-particle"
-                        ></div>
-                        <div
-                            class="absolute bottom-10 left-0 w-3 h-3 bg-sky-300 rounded-full blur-[2px] animate-float-particle delay-1000"
-                        ></div>
-                        <div
-                            class="absolute top-1/2 left-[-20px] w-1.5 h-1.5 bg-rose-300 rounded-full blur-[1px] animate-float-particle delay-700"
-                        ></div>
-
                         <div
                             class="absolute inset-0 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-pulse-slow"
                         ></div>
@@ -219,21 +220,11 @@ const faqs = [
                         <div
                             class="absolute inset-8 md:inset-4 bg-white/40 dark:bg-white/5 rounded-blob backdrop-blur-sm border border-white/20 dark:border-white/5 animate-float-slow delay-150"
                         ></div>
-
                         <img
                             :src="skyKidGif"
                             alt="Sky Kid Mascot"
                             class="relative z-10 w-48 h-48 md:w-72 md:h-72 object-contain scale-110 hover:scale-125 transition-transform duration-500 -mt-2 animate-float-smooth"
                         />
-
-                        <div
-                            class="absolute -top-0 -right-0 md:-top-2 md:-right-2 bg-white dark:bg-slate-800 p-2 md:p-3 rounded-full shadow-lg animate-float-fast z-20"
-                        >
-                            <Heart
-                                :size="20"
-                                class="text-rose-400 fill-rose-400 md:w-6 md:h-6"
-                            />
-                        </div>
                         <div
                             class="absolute -bottom-4 md:-bottom-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur px-4 py-2 md:px-5 md:py-3 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-2 md:gap-3 animate-bounce-slow z-20"
                         >
@@ -251,27 +242,7 @@ const faqs = [
                 <div
                     class="text-center md:text-left order-2 md:order-1 animate-in fade-in slide-in-from-bottom-8 duration-700 w-full"
                 >
-                    <div
-                        v-if="userStore.loading"
-                        class="space-y-8 animate-pulse"
-                    >
-                        <div class="space-y-3">
-                            <div
-                                class="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded-full mx-auto md:mx-0"
-                            ></div>
-                            <div
-                                class="h-10 w-3/4 bg-slate-200 dark:bg-slate-800 rounded-2xl mx-auto md:mx-0"
-                            ></div>
-                        </div>
-                        <div
-                            class="w-full max-w-[380px] aspect-[1.6/1] bg-slate-200 dark:bg-slate-800 rounded-3xl mx-auto md:mx-0"
-                        ></div>
-                    </div>
-
-                    <div
-                        v-else-if="userStore.user"
-                        class="space-y-6 md:space-y-8"
-                    >
+                    <div v-if="userStore.user" class="space-y-6 md:space-y-8">
                         <div>
                             <div
                                 class="flex items-center justify-center md:justify-start gap-3 mb-2"
@@ -297,7 +268,6 @@ const faqs = [
                                 >
                             </h1>
                         </div>
-
                         <div
                             class="relative max-w-[340px] md:max-w-[380px] mx-auto md:mx-0 z-20"
                         >
@@ -307,32 +277,64 @@ const faqs = [
                         <div
                             class="flex flex-col gap-3 max-w-[340px] md:max-w-[380px] mx-auto md:mx-0"
                         >
-                            <div class="grid grid-cols-3 gap-2">
+                            <div
+                                class="grid grid-cols-3 gap-3 p-1.5 rounded-2xl bg-white/50 dark:bg-black/20 border border-white/50 dark:border-white/5 shadow-sm backdrop-blur-sm"
+                            >
                                 <button
                                     @click="handleTopUp"
-                                    class="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-indigo-100 dark:border-slate-600 text-indigo-600 dark:text-indigo-300 font-bold hover:bg-indigo-50 dark:hover:bg-slate-700 transition"
+                                    class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:bg-white dark:hover:bg-slate-700/50 transition duration-300 group active:scale-95"
                                 >
-                                    <Plus :size="18" />
-                                    <span class="text-[10px] md:text-xs"
+                                    <div
+                                        class="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 text-indigo-500 group-hover:text-indigo-600 transition"
+                                    >
+                                        <Plus :size="18" />
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                                         >Isi Saldo</span
                                     >
                                 </button>
                                 <button
                                     @click="showHistoryModal = true"
-                                    class="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-600 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                                    class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:bg-white dark:hover:bg-slate-700/50 transition duration-300 group active:scale-95"
                                 >
-                                    <History :size="18" />
-                                    <span class="text-[10px] md:text-xs"
+                                    <div
+                                        class="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/20 text-emerald-500 group-hover:text-emerald-600 transition"
+                                    >
+                                        <History :size="18" />
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                                         >Riwayat</span
                                     >
                                 </button>
                                 <button
-                                    @click="userStore.logout()"
-                                    class="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-rose-100 dark:border-rose-900/30 text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-rose-900/20 transition"
+                                    @click="confirmLogout"
+                                    class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:bg-white dark:hover:bg-slate-700/50 transition duration-300 group active:scale-95"
                                 >
-                                    <LogOut :size="18" />
-                                    <span class="text-[10px] md:text-xs"
+                                    <div
+                                        class="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-500/20 text-rose-500 group-hover:text-rose-600 transition"
+                                    >
+                                        <LogOut :size="18" />
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
                                         >Keluar</span
+                                    >
+                                </button>
+                                <button
+                                    v-if="false"
+                                    @click="router.push('/member/settings')"
+                                    class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:bg-white dark:hover:bg-slate-700/50 transition duration-300 group active:scale-95"
+                                >
+                                    <div
+                                        class="p-1.5 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-500 group-hover:text-slate-700 transition"
+                                    >
+                                        <Settings :size="18" />
+                                    </div>
+                                    <span
+                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
+                                        >Akun</span
                                     >
                                 </button>
                             </div>
@@ -377,6 +379,50 @@ const faqs = [
                                 <Crown :size="18" /> Join Member
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section
+            v-if="!userStore.user"
+            class="py-12 px-6 bg-white dark:bg-charcoal border-y border-slate-100 dark:border-slate-800"
+        >
+            <div class="container mx-auto max-w-6xl">
+                <div class="text-center mb-8">
+                    <h2
+                        class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2"
+                    >
+                        Cara Order Anti Ribet
+                    </h2>
+                    <p
+                        class="text-xs md:text-sm text-slate-500 dark:text-slate-400"
+                    >
+                        Pesan joki semudah update status.
+                    </p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div
+                        v-for="(step, i) in steps"
+                        :key="i"
+                        class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-center border border-slate-100 dark:border-slate-700"
+                    >
+                        <div
+                            class="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-3"
+                            :class="step.color"
+                        >
+                            <component :is="step.icon" :size="20" />
+                        </div>
+                        <h3
+                            class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1"
+                        >
+                            {{ step.title }}
+                        </h3>
+                        <p
+                            class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 leading-snug"
+                        >
+                            {{ step.desc }}
+                        </p>
                     </div>
                 </div>
             </div>
@@ -457,7 +503,6 @@ const faqs = [
                         Punya Pertanyaan?
                     </h2>
                 </div>
-
                 <div class="space-y-3">
                     <div
                         v-for="(faq, i) in faqs"
@@ -477,8 +522,8 @@ const faqs = [
                         >
                             <span class="flex-1 pr-4 text-sm md:text-base">{{
                                 faq.q
-                            }}</span>
-                            <ChevronDown
+                            }}</span
+                            ><ChevronDown
                                 :size="18"
                                 :class="{
                                     'rotate-180 text-sky-500':
@@ -495,7 +540,6 @@ const faqs = [
                         </div>
                     </div>
                 </div>
-
                 <div
                     class="mt-8 text-center bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700"
                 >
@@ -508,9 +552,8 @@ const faqs = [
                         href="https://wa.me/6285942963323"
                         target="_blank"
                         class="inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 dark:shadow-none transition btn-bouncy text-sm"
+                        ><MessageCircle :size="18" /> Chat via WhatsApp</a
                     >
-                        <MessageCircle :size="18" /> Chat via WhatsApp
-                    </a>
                 </div>
             </div>
         </section>
@@ -521,19 +564,93 @@ const faqs = [
                 :product="selectedProduct"
                 @close="showProductModal = false"
             />
-
             <transition name="fade">
                 <TransactionHistoryModal
                     v-if="showHistoryModal"
                     @close="showHistoryModal = false"
                 />
             </transition>
+
+            <transition name="fade">
+                <div
+                    v-if="alertState.isOpen"
+                    class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                >
+                    <div
+                        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
+                        @click="alertState.isOpen = false"
+                    ></div>
+                    <div
+                        class="bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl w-full max-w-[270px] rounded-[18px] shadow-2xl relative z-10 overflow-hidden text-center animate-in zoom-in-105 duration-200"
+                    >
+                        <div class="p-5 pb-5">
+                            <h3
+                                class="text-[17px] font-bold text-slate-900 dark:text-white mb-1 leading-snug"
+                            >
+                                {{ alertState.title }}
+                            </h3>
+                            <p
+                                class="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed"
+                            >
+                                {{ alertState.message }}
+                            </p>
+                        </div>
+                        <div
+                            class="flex border-t border-slate-200/50 dark:border-white/10 divide-x divide-slate-200/50 dark:divide-white/10"
+                        >
+                            <button
+                                @click="alertState.isOpen = false"
+                                class="flex-1 py-3.5 text-[17px] font-normal text-blue-500 hover:bg-slate-50 dark:hover:bg-white/5 transition active:opacity-70"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                @click="alertState.onConfirm"
+                                class="flex-1 py-3.5 text-[17px] font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition active:opacity-70"
+                            >
+                                Keluar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </Teleport>
     </div>
 </template>
 
 <style scoped>
-/* Animations */
+.animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+}
+.animate-spin-reverse-slow {
+    animation: spin-reverse-slow 15s linear infinite;
+}
+.animate-pulse-slow {
+    animation: pulse-slow 4s ease-in-out infinite;
+}
+.animate-float-particle {
+    animation: float-particle 3s ease-in-out infinite;
+}
+.animate-float-slow {
+    animation: float 6s ease-in-out infinite;
+}
+.animate-float-fast {
+    animation: float 4s ease-in-out infinite;
+}
+.animate-bounce-slow {
+    animation: bounce 3s infinite;
+}
+.animate-float-smooth {
+    animation: float 5s ease-in-out infinite;
+}
+.fade-enter-active,
+.fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+    opacity: 0;
+}
 @keyframes spin-slow {
     0% {
         transform: rotate(0deg);
@@ -550,13 +667,6 @@ const faqs = [
         transform: rotate(0deg);
     }
 }
-.animate-spin-slow {
-    animation: spin-slow 20s linear infinite;
-}
-.animate-spin-reverse-slow {
-    animation: spin-reverse-slow 15s linear infinite;
-}
-
 @keyframes pulse-slow {
     0%,
     100% {
@@ -568,10 +678,6 @@ const faqs = [
         transform: scale(1.1);
     }
 }
-.animate-pulse-slow {
-    animation: pulse-slow 4s ease-in-out infinite;
-}
-
 @keyframes float-particle {
     0% {
         transform: translateY(0) scale(0.8);
@@ -585,23 +691,6 @@ const faqs = [
         opacity: 0;
     }
 }
-.animate-float-particle {
-    animation: float-particle 3s ease-in-out infinite;
-}
-
-.animate-float-slow {
-    animation: float 6s ease-in-out infinite;
-}
-.animate-float-fast {
-    animation: float 4s ease-in-out infinite;
-}
-.animate-bounce-slow {
-    animation: bounce 3s infinite;
-}
-.animate-float-smooth {
-    animation: float 5s ease-in-out infinite;
-}
-
 @keyframes float {
     0%,
     100% {
@@ -610,14 +699,5 @@ const faqs = [
     50% {
         transform: translateY(-15px);
     }
-}
-
-.fade-enter-active,
-.fade-leave-active {
-    transition: opacity 0.3s ease;
-}
-.fade-enter-from,
-.fade-leave-to {
-    opacity: 0;
 }
 </style>
