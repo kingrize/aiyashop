@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, nextTick, onMounted } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { products } from "../data/products";
 import { useUserStore } from "../stores/user";
 import ProductCard from "../components/ProductCard.vue";
@@ -97,9 +97,9 @@ const saveName = async () => {
     isEditingName.value = false;
 };
 
+// --- LOGIKA BARU TOP UP (REDIRECT) ---
 const handleTopUp = () => {
-    const text = `Halo Admin Aiya! 👋%0A%0ASaya member *${userStore.memberData?.displayName || "Baru"}* (Email: ${userStore.user?.email}) mau Top Up saldo dong!`;
-    window.open(`https://wa.me/6285942963323?text=${text}`, "_blank");
+    router.push("/top-up");
 };
 
 const handleJoinMember = () => {
@@ -213,11 +213,9 @@ const faqs = [
                         <div
                             class="absolute inset-0 bg-indigo-400/20 dark:bg-indigo-500/10 rounded-full blur-3xl animate-pulse-slow"
                         ></div>
-
                         <div
                             class="absolute inset-4 md:inset-0 bg-gradient-to-br from-sky-100 to-indigo-50 dark:from-slate-800 dark:to-slate-900 rounded-blob shadow-2xl border border-white/50 dark:border-white/5 animate-float-slow"
                         ></div>
-
                         <div
                             class="absolute inset-8 md:inset-4 bg-white/40 dark:bg-white/5 rounded-blob backdrop-blur-sm border border-white/20 dark:border-white/5 animate-float-slow delay-150"
                         ></div>
@@ -275,13 +273,21 @@ const faqs = [
                         class="space-y-6 md:space-y-8"
                     >
                         <div>
-                            <p
-                                class="text-xs md:text-sm font-bold text-sky-500 dark:text-sky-400 tracking-widest uppercase mb-1 flex items-center justify-center md:justify-start gap-2"
+                            <div
+                                class="flex items-center justify-center md:justify-start gap-3 mb-2"
                             >
-                                <Sparkles :size="14" /> Member Dashboard
-                            </p>
+                                <p
+                                    class="text-xs md:text-sm font-bold text-sky-500 dark:text-sky-400 tracking-widest uppercase flex items-center gap-2"
+                                >
+                                    <Sparkles :size="14" /> Member Dashboard
+                                </p>
+                                <img
+                                    :src="skyKidGif"
+                                    class="w-8 h-8 object-contain md:hidden animate-bounce-slow"
+                                />
+                            </div>
                             <h1
-                                class="text-3xl md:text-5xl font-bold text-slate-800 dark:text-slate-100 leading-tight"
+                                class="text-2xl md:text-5xl font-bold text-slate-800 dark:text-slate-100 leading-tight"
                             >
                                 {{ timeGreeting }},
                                 <span
@@ -386,10 +392,16 @@ const faqs = [
                         class="text-2xl md:text-4xl font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center justify-center gap-2"
                     >
                         Menu Jajan
-                        <img
-                            :src="skykidMoth"
-                            class="w-8 h-8 md:w-10 md:h-10 -mt-2 animate-bounce"
-                        />
+                        <div class="relative">
+                            <img
+                                :src="skykidMoth"
+                                class="w-8 h-8 md:w-10 md:h-10 -mt-2 animate-bounce relative z-10"
+                            />
+                            <Star
+                                :size="24"
+                                class="absolute -top-1 -right-2 text-amber-400 fill-amber-400 animate-spin-slow opacity-80"
+                            />
+                        </div>
                     </h2>
                     <p
                         class="text-xs md:text-base text-slate-500 dark:text-slate-400"
@@ -509,6 +521,7 @@ const faqs = [
                 :product="selectedProduct"
                 @close="showProductModal = false"
             />
+
             <transition name="fade">
                 <TransactionHistoryModal
                     v-if="showHistoryModal"
@@ -520,7 +533,7 @@ const faqs = [
 </template>
 
 <style scoped>
-/* Orbit Animation */
+/* Animations */
 @keyframes spin-slow {
     0% {
         transform: rotate(0deg);
@@ -544,7 +557,6 @@ const faqs = [
     animation: spin-reverse-slow 15s linear infinite;
 }
 
-/* Pulse Glow */
 @keyframes pulse-slow {
     0%,
     100% {
@@ -560,7 +572,6 @@ const faqs = [
     animation: pulse-slow 4s ease-in-out infinite;
 }
 
-/* Light Particles */
 @keyframes float-particle {
     0% {
         transform: translateY(0) scale(0.8);
@@ -578,7 +589,6 @@ const faqs = [
     animation: float-particle 3s ease-in-out infinite;
 }
 
-/* Original Animations */
 .animate-float-slow {
     animation: float 6s ease-in-out infinite;
 }
@@ -601,6 +611,7 @@ const faqs = [
         transform: translateY(-15px);
     }
 }
+
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;

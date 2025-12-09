@@ -28,6 +28,8 @@ import {
     Zap,
     ArrowRight,
     ShieldCheck,
+    User,
+    UserPlus,
 } from "lucide-vue-next";
 import {
     doc,
@@ -52,8 +54,8 @@ const showSuccessModal = ref(false);
 const isProcessingPayment = ref(false);
 const countdown = ref(3);
 
-const isRegisterMode = ref(false);
-const authForm = reactive({ name: "", username: "", password: "" });
+// HAPUS IS_REGISTER_MODE, HANYA ADA LOGIN
+const authForm = reactive({ username: "", password: "" });
 const isAuthLoading = ref(false);
 
 watch(
@@ -75,7 +77,6 @@ const memberBalanceAfter = computed(() => {
     return (userStore.memberData?.saldo || 0) - finalTotalComputed.value;
 });
 
-// --- HELPERS ---
 const getIcon = (type) => {
     const map = {
         wind: Wind,
@@ -120,22 +121,13 @@ const handleApplyPromo = async () => {
     setTimeout(() => (promoMessage.value = ""), 3000);
 };
 
+// LOGIN ONLY
 const handleAuthSubmit = async () => {
     isAuthLoading.value = true;
     try {
-        if (isRegisterMode.value) {
-            if (!authForm.name || !authForm.username || !authForm.password)
-                throw new Error("Isi semua data!");
-            await userStore.register(
-                authForm.name,
-                authForm.username + "@aiyashop.com",
-                authForm.password,
-            );
-        } else {
-            if (!authForm.username || !authForm.password)
-                throw new Error("Username & Password wajib!");
-            await userStore.login(authForm.username, authForm.password);
-        }
+        if (!authForm.username || !authForm.password)
+            throw new Error("Username & Password wajib!");
+        await userStore.login(authForm.username, authForm.password);
     } catch (e) {
         alert(e.message || "Gagal login");
     } finally {
@@ -541,30 +533,25 @@ const processCheckout = (statusBayar) => {
                                     <p
                                         class="text-[10px] text-indigo-500 dark:text-indigo-300 mb-2 font-bold text-center"
                                     >
-                                        {{
-                                            isRegisterMode
-                                                ? "Daftar Member Baru ✨"
-                                                : "Login Member Lama 🔐"
-                                        }}
+                                        Login Member Only 🔐
                                     </p>
                                     <div class="space-y-2">
-                                        <input
-                                            v-if="isRegisterMode"
-                                            v-model="authForm.name"
-                                            type="text"
-                                            placeholder="Nama Panggilan Kamu"
-                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
-                                        />
-                                        <input
-                                            v-model="authForm.username"
-                                            type="text"
-                                            placeholder="Username"
-                                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
-                                        />
+                                        <div class="relative">
+                                            <span
+                                                class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                                ><User :size="14"
+                                            /></span>
+                                            <input
+                                                v-model="authForm.username"
+                                                type="text"
+                                                placeholder="Username"
+                                                class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
+                                            />
+                                        </div>
                                         <input
                                             v-model="authForm.password"
                                             type="password"
-                                            placeholder="Password (Min. 6)"
+                                            placeholder="Password"
                                             class="w-full px-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
                                         />
                                     </div>
@@ -575,37 +562,27 @@ const processCheckout = (statusBayar) => {
                                         <AlertCircle :size="10" />
                                         {{ userStore.authError }}
                                     </p>
-                                    <div class="flex gap-2 mt-3">
+
+                                    <div class="mt-3 space-y-2">
                                         <button
                                             @click="handleAuthSubmit"
                                             :disabled="isAuthLoading"
-                                            class="flex-1 bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-1"
+                                            class="w-full bg-indigo-600 text-white py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 flex justify-center items-center gap-1"
                                         >
                                             <Loader2
                                                 v-if="isAuthLoading"
                                                 :size="12"
                                                 class="animate-spin"
                                             />
-                                            {{
-                                                isRegisterMode
-                                                    ? "Daftar"
-                                                    : "Masuk"
-                                            }}
+                                            Masuk
                                         </button>
-                                        <button
-                                            @click="
-                                                isRegisterMode =
-                                                    !isRegisterMode;
-                                                userStore.authError = null;
-                                            "
-                                            class="px-3 py-1.5 bg-white dark:bg-slate-800 text-indigo-500 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700 rounded-lg text-xs font-bold hover:bg-indigo-50 dark:hover:bg-slate-700"
-                                        >
-                                            {{
-                                                isRegisterMode
-                                                    ? "Punya Akun?"
-                                                    : "Daftar?"
-                                            }}
-                                        </button>
+                                        <a
+                                            href="https://wa.me/6285942963323?text=Halo%20Admin%20Aiya!%20Saya%20mau%20daftar%20member%20baru%20dong%20✨"
+                                            target="_blank"
+                                            class="block text-center text-[10px] text-indigo-500 dark:text-indigo-400 font-bold hover:underline flex items-center justify-center gap-1"
+                                            >Belum punya akun? Daftar via WA
+                                            <UserPlus :size="12"
+                                        /></a>
                                     </div>
                                 </div>
                             </div>
@@ -621,7 +598,7 @@ const processCheckout = (statusBayar) => {
                         </div>
                         <div
                             v-if="promoStore.activeCode && isPromoEligible"
-                            class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800"
+                            class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800 animate-in slide-in-from-left-2"
                         >
                             <span class="flex items-center gap-1"
                                 ><Tag :size="12" /> Hemat ({{
@@ -721,7 +698,6 @@ const processCheckout = (statusBayar) => {
                             Pastikan saldo kamu cukup ya!
                         </p>
                     </div>
-
                     <div class="p-6 bg-slate-50 dark:bg-slate-800/50">
                         <div class="space-y-4">
                             <div
@@ -729,8 +705,7 @@ const processCheckout = (statusBayar) => {
                             >
                                 <span class="text-slate-500 dark:text-slate-400"
                                     >Saldo Awal</span
-                                >
-                                <span
+                                ><span
                                     class="font-bold text-slate-700 dark:text-slate-200"
                                     >{{
                                         formatRupiah(
@@ -739,23 +714,19 @@ const processCheckout = (statusBayar) => {
                                     }}</span
                                 >
                             </div>
-
                             <div
                                 class="flex justify-between items-center text-sm"
                             >
                                 <span class="text-slate-500 dark:text-slate-400"
                                     >Total Belanja</span
-                                >
-                                <span class="font-bold text-rose-500"
+                                ><span class="font-bold text-rose-500"
                                     >-
                                     {{ formatRupiah(finalTotalComputed) }}</span
                                 >
                             </div>
-
                             <div
                                 class="h-px bg-slate-200 dark:bg-slate-700 border-dashed border-t"
                             ></div>
-
                             <div
                                 class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm"
                             >
@@ -778,7 +749,6 @@ const processCheckout = (statusBayar) => {
                                 >
                             </div>
                         </div>
-
                         <div class="flex gap-3 mt-6">
                             <button
                                 @click="showConfirmModal = false"

@@ -65,7 +65,6 @@ const estimatedDays = computed(() => {
 });
 
 /* ACTIONS */
-// UPDATE: Step kini 1, bukan 10
 const decreaseHearts = () => {
     if (heartCount.value > minHearts.value) heartCount.value--;
     if (heartCount.value < minHearts.value) heartCount.value = minHearts.value;
@@ -78,9 +77,7 @@ const increaseHearts = () => {
 // Handle manual input typing
 const handleInput = (e) => {
     let val = parseInt(e.target.value);
-    if (isNaN(val)) return; // Allow typing
-    // Jangan langsung clamp saat mengetik agar user bisa hapus angka,
-    // validasi akhir bisa saat blur atau submit
+    if (isNaN(val)) return;
     heartCount.value = val;
 };
 
@@ -98,7 +95,6 @@ watch(
 );
 
 const handleAddToCart = () => {
-    // Final Validation before add
     if (heartCount.value < minHearts.value) heartCount.value = minHearts.value;
     if (heartCount.value > maxHearts.value) heartCount.value = maxHearts.value;
 
@@ -215,7 +211,7 @@ const handleAddToCart = () => {
                 v-model.number="slots"
                 :min="minSlots"
                 :max="maxSlots"
-                class="w-full h-3 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all"
+                class="w-full h-3 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all border border-slate-200 dark:border-slate-600"
             />
 
             <div

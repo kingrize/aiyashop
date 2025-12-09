@@ -1,39 +1,53 @@
 <script setup>
 import {
     Check,
-    Star,
     Crown,
     ChevronLeft,
     MessageCircle,
+    Gift,
+    Tag,
+    Lock,
+    Zap,
+    Star,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 
+// DATA BENEFIT BARU
 const benefits = [
     {
-        title: "Harga Spesial",
-        desc: "Dapet potongan harga khusus member di setiap pembelian.",
+        title: "Bonus Welcome: 50 Heart!",
+        desc: "Gratis 50 Instant Heart langsung setelah join.",
+        icon: Gift,
+        color: "text-rose-500 bg-rose-100 dark:bg-rose-900/30",
     },
     {
-        title: "Prioritas Antrian",
-        desc: "Pesanan kamu dikerjain duluan dibanding non-member.",
+        title: "Diskon Otomatis Seumur Hidup",
+        desc: "Potongan harga spesial di setiap transaksi.",
+        icon: Tag,
+        color: "text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30",
     },
     {
-        title: "Tanpa Biaya Admin",
-        desc: "Top up saldo 100rb, masuk 100rb. Tanpa potongan.",
+        title: "Akses Produk Eksklusif",
+        desc: "Bisa beli item langka yang tidak dijual untuk umum.",
+        icon: Lock,
+        color: "text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30",
     },
     {
-        title: "Badge Eksklusif",
-        desc: "Tampilan profil keren dengan badge Moth/Phoenix.",
+        title: "Badge Profil 'Sky Kid'",
+        desc: "Tampilan profil keren dengan badge Moth/Elder.",
+        icon: Star,
+        color: "text-amber-500 bg-amber-100 dark:bg-amber-900/30",
     },
     {
-        title: "Simpan Data",
-        desc: "Gak perlu kirim ulang data login setiap mau joki.",
+        title: "Jalur Prioritas VIP",
+        desc: "Orderan kamu dikerjakan duluan, tanpa antri!",
+        icon: Zap,
+        color: "text-sky-500 bg-sky-100 dark:bg-sky-900/30",
     },
 ];
 
-// UPDATE WA
 const handleJoin = () => {
     const text = `Halo Admin Aiya! 👋%0A%0ASaya mau daftar *Member Premium* dong! Tolong infokan cara pembayarannya ya (25K). ✨`;
     window.open(`https://wa.me/6285942963323?text=${text}`, "_blank");
@@ -42,7 +56,7 @@ const handleJoin = () => {
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal pt-28 pb-20 px-6 transition-colors duration-300"
+        class="min-h-screen bg-cream dark:bg-charcoal pt-24 pb-20 px-6 transition-colors duration-300"
     >
         <div class="max-w-4xl mx-auto">
             <button
@@ -62,7 +76,7 @@ const handleJoin = () => {
                         class="relative bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-xl dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden text-center transition-colors duration-300"
                     >
                         <div
-                            class="w-24 h-24 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mx-auto flex items-center justify-center shadow-lg mb-6"
+                            class="w-24 h-24 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mx-auto flex items-center justify-center shadow-lg mb-6 animate-pulse"
                         >
                             <Crown :size="48" class="text-white" />
                         </div>
@@ -83,14 +97,12 @@ const handleJoin = () => {
                         >
                             <span
                                 class="text-sm text-slate-400 dark:text-slate-500 line-through"
+                                >Rp 50.000</span
                             >
-                                Rp 50.000
-                            </span>
                             <span
                                 class="bg-rose-100 text-rose-500 dark:bg-rose-500/10 dark:text-rose-300 text-xs font-bold px-2 py-1 rounded-lg border border-transparent dark:border-rose-500/20"
+                                >DISKON 50%</span
                             >
-                                DISKON 50%
-                            </span>
                         </div>
 
                         <p
@@ -120,9 +132,8 @@ const handleJoin = () => {
                 <div class="order-1 md:order-2">
                     <span
                         class="text-indigo-500 dark:text-indigo-300 font-bold tracking-wider text-xs uppercase bg-indigo-50 dark:bg-indigo-500/10 border border-transparent dark:border-indigo-500/20 px-3 py-1 rounded-full"
+                        >Membership</span
                     >
-                        Membership
-                    </span>
 
                     <h1
                         class="text-4xl md:text-5xl font-bold text-slate-800 dark:text-slate-100 mt-4 mb-6 leading-tight"
@@ -130,40 +141,37 @@ const handleJoin = () => {
                         Level Up Pengalaman <br />
                         <span
                             class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 dark:from-indigo-400 dark:to-purple-400"
+                            >Nge-Sky Kamu!</span
                         >
-                            Nge-Sky Kamu!
-                        </span>
                     </h1>
 
                     <p
-                        class="text-slate-500 dark:text-slate-400 text-lg mb-10 leading-relaxed"
+                        class="text-slate-500 dark:text-slate-400 text-lg mb-8 leading-relaxed"
                     >
                         Gabung jadi keluarga AiyaShop dan nikmati kemudahan joki
                         tanpa ribet, lebih hemat, dan lebih prioritas.
                     </p>
 
-                    <div class="space-y-6">
+                    <div class="space-y-4">
                         <div
                             v-for="(benefit, index) in benefits"
                             :key="index"
-                            class="flex gap-4"
+                            class="flex gap-4 p-3 rounded-2xl hover:bg-white dark:hover:bg-slate-800/50 transition duration-300 border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
                         >
                             <div
-                                class="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center shrink-0 mt-1"
+                                class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-1"
+                                :class="benefit.color"
                             >
-                                <Check
-                                    :size="16"
-                                    class="text-indigo-600 dark:text-indigo-300"
-                                />
+                                <component :is="benefit.icon" :size="20" />
                             </div>
                             <div>
                                 <h4
-                                    class="font-bold text-slate-700 dark:text-slate-200"
+                                    class="font-bold text-slate-700 dark:text-slate-200 text-base"
                                 >
                                     {{ benefit.title }}
                                 </h4>
                                 <p
-                                    class="text-sm text-slate-500 dark:text-slate-400"
+                                    class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"
                                 >
                                     {{ benefit.desc }}
                                 </p>

@@ -1,5 +1,6 @@
 // LOKASI FILE: src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
+import { useUserStore } from "../stores/user"; // Pastikan ini ada
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -7,36 +8,9 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      // Lazy loading (Recommended)
       component: () => import("../views/HomeView.vue"),
       meta: {
-        title:
-          "AiyaShop - Jasa Joki Sky: Children of the Light Termurah & Aman",
-        metaTags: [
-          {
-            name: "description",
-            content:
-              "Jasa joki Sky CoTL Indonesia terpercaya, amanah, dan cepat. Melayani Candle Run, Heart, Eden Run, dan Trial. 100% Manual tanpa cheat.",
-          },
-          {
-            name: "keywords",
-            content:
-              "joki sky cotl, jasa candle run sky, beli heart sky, joki eden sky, aiyashop, sky children of the light indonesia",
-          },
-          {
-            property: "og:title",
-            content: "AiyaShop - Jasa Joki Sky: Children of the Light",
-          },
-          {
-            property: "og:description",
-            content:
-              "Mau Candle Run atau Heart tapi mager? Serahin ke AiyaShop aja! Proses cepat, akun aman.",
-          },
-          {
-            property: "og:type",
-            content: "website",
-          },
-        ],
+        title: "AiyaShop - Jasa Joki Sky: Children of the Light",
       },
     },
     {
@@ -44,23 +18,36 @@ const router = createRouter({
       name: "join-member",
       component: () => import("../views/JoinMemberView.vue"),
       meta: {
-        title: "Join Member Premium - AiyaShop",
-        metaTags: [
-          {
-            name: "description",
-            content:
-              "Gabung jadi Member Premium AiyaShop. Nikmati diskon khusus, prioritas antrian joki, dan fitur topup saldo tanpa potongan.",
-          },
-          {
-            property: "og:title",
-            content: "Join Member Premium - AiyaShop",
-          },
-          {
-            property: "og:description",
-            content:
-              "Daftar member sekarang, cuma 25K seumur hidup! Diskon joki selamanya.",
-          },
-        ],
+        title: "Join Member Premium",
+      },
+    },
+    {
+      path: "/top-up",
+      name: "top-up",
+      component: () => import("../views/TopUpView.vue"),
+      meta: {
+        title: "Isi Saldo Member",
+      },
+    },
+
+    // --- ADMIN ROUTE ---
+    {
+      path: "/admin",
+      name: "admin-dashboard",
+      component: () => import("../views/admin/AdminDashboard.vue"),
+      meta: {
+        title: "Admin Dashboard",
+        requiresAdmin: true,
+      },
+    },
+
+    // 404 (Wajib Paling Bawah)
+    {
+      path: "/:pathMatch(.*)*",
+      name: "not-found",
+      component: () => import("../views/NotFoundView.vue"),
+      meta: {
+        title: "404 OOB - Tersesat?",
       },
     },
   ],
@@ -72,35 +59,36 @@ const router = createRouter({
   },
 });
 
-// --- LOGIC SEO & META TAGS ---
-router.beforeEach((to, from, next) => {
-  // 1. Update Judul Halaman (Tab Browser)
-  document.title = to.meta.title || "AiyaShop - Sky Service";
+// --- NAVIGATION GUARD ---
+router.beforeEach(async (to, from, next) => {
+  const userStore = useUserStore();
 
-  // 2. Hapus Meta Tags lama (yang dibuat oleh router sebelumnya)
-  // Kita cari elemen meta yang punya atribut 'data-vue-router-controlled'
-  const elements = document.querySelectorAll(
-    "meta[data-vue-router-controlled]",
-  );
-  elements.forEach((el) => el.parentNode.removeChild(el));
+  document.title = to.meta.title || "AiyaShop";
 
-  // 3. Tambahkan Meta Tags baru dari route saat ini
-  if (to.meta.metaTags) {
-    to.meta.metaTags.forEach((tagDef) => {
-      const tag = document.createElement("meta");
-
-      Object.keys(tagDef).forEach((key) => {
-        tag.setAttribute(key, tagDef[key]);
+  // Tunggu Firebase Loading
+  if (userStore.loading) {
+    await new Promise((resolve) => {
+      const unsubscribe = userStore.$subscribe((mutation, state) => {
+        if (!state.loading) {
+          unsubscribe();
+          resolve();
+        }
       });
-
-      // Tandai tag ini agar bisa dihapus nanti saat pindah halaman
-      tag.setAttribute("data-vue-router-controlled", "");
-
-      document.head.appendChild(tag);
+      if (!userStore.loading) resolve();
     });
+  }
+
+  // Cek Admin
+  if (to.meta.requiresAdmin) {
+    if (!userStore.user || !userStore.isAdmin) {
+      alert("Akses Ditolak: Khusus Admin 🚫");
+      next("/");
+      return;
+    }
   }
 
   next();
 });
 
+// !!! BAGIAN INI SANGAT PENTING JANGAN SAMPAI HILANG !!!
 export default router;
