@@ -1,124 +1,103 @@
 // LOKASI FILE: src/data/products.js
 export const products = [
-  // --- TRIALS (VARIAN) ---
+  // --- HEART PRODUCTS (KEEP) ---
   {
-    id: 'trial_custom',
-    name: 'Joki Trials (Pilih Sendiri)',
-    price: 3000, 
-    category: 'special',
-    tag: 'Custom Trial',
-    desc: 'Pilih trial yang bikin pusing aja, atau borong semua biar terima beres! Aman 100% manual.',
-    note: 'Klik "Pilih Opsi" buat centang trial.',
-    eta: '15-20 Menit/Trial',
-    iconType: 'Cloud',
-    color: 'bg-cyan-500 text-white',
-    blobColor: 'bg-cyan-100',
+    id: "daily-heart",
+    name: "Daily Heart (Via Bot)",
+    category: "heart",
+    price: 100,
+    discountPrice: 0,
+    iconType: "heart",
+    tag: "Best Seller",
+    desc: "Dikirim bertahap 1 heart/hari via Bot. Wajib add akun bot. Bonus +5 heart tiap beli 50.",
+    isCalculator: true,
+    config: {
+      pricePerHeart: 100,
+      minHearts: 10,
+      maxHearts: 1000,
+      defaultHearts: 50,
+      minSlots: 1,
+      maxSlots: 20,
+      hasBonus: true,
+      isInstant: false,
+    },
+  },
+  {
+    id: "instant-heart",
+    name: "Instant Heart (Kilat)",
+    category: "heart",
+    price: 500,
+    discountPrice: 0,
+    iconType: "zap",
+    tag: "Premium",
+    desc: "Dikirim LANGSUNG hari ini juga via Trade. Tanpa antri, tanpa slot bot.",
+    isCalculator: true,
+    config: {
+      pricePerHeart: 500,
+      minHearts: 10,
+      maxHearts: 150,
+      defaultHearts: 10,
+      hasBonus: false,
+      isInstant: true,
+    },
+  },
+
+  // --- NEW PRODUCTS ---
+
+  // 1. JOKI TRIALS
+  {
+    id: "trial-elements",
+    name: "Joki Trial of Elements",
+    category: "special",
+    price: 0, // Base 0, harga dari varian
+    discountPrice: 0,
+    iconType: "cloud", // Icon Awan/Elemen
+    tag: "Challenge",
+    desc: "Joki melewati rintangan Trial. Pilih elemen yang kamu butuhkan atau ambil paket lengkap.",
+    eta: "30-60 Menit",
     variants: [
-      { id: 'v_water', name: 'Trial of Water 💧', price: 3000 },
-      { id: 'v_earth', name: 'Trial of Earth 🪨', price: 3000 },
-      { id: 'v_air', name: 'Trial of Air 🌪️', price: 4000 },
-      { id: 'v_fire', name: 'Trial of Fire 🔥', price: 5000 },
-      { id: 'v_all', name: 'Bundle: All 4 Trials ✨', price: 13000 }
-    ]
+      { id: "t-water", name: "Trial Water 💧", price: 1000 },
+      { id: "t-earth", name: "Trial Earth 🌿", price: 1000 },
+      { id: "t-air", name: "Trial Air 💨", price: 1000 },
+      { id: "t-fire", name: "Trial Fire 🔥", price: 1000 },
+      // isBundle: true menandakan jika ini dipilih, yang lain otomatis uncheck
+      {
+        id: "t-bundle",
+        name: "Bundle All Trials (Lengkap) ✨",
+        price: 4000,
+        isBundle: true,
+      },
+    ],
   },
-  // --- CANDLE RUN ---
+
+  // 2. JOKI CANDLE RUN (CR)
   {
-    id: 'cr_custom',
-    name: 'Candle Run',
-    price: 5000, 
-    category: 'special',
-    tag: 'Custom Trial',
-    desc: 'Pilih trial yang bikin pusing aja, atau borong semua biar terima beres! Aman 100% manual.',
-    note: 'Klik "Pilih Opsi" buat centang trial.',
-    eta: '15-20 Menit/Trial',
-    iconType: 'Cloud',
-    color: 'bg-amber-400 text-white',
-    blobColor: 'bg-amber-100',
+    id: "cr-daily-quest",
+    name: "Daily CR + Quest",
+    category: "candlerun",
+    price: 0,
+    discountPrice: 0,
+    iconType: "flame",
+    tag: "Harian",
+    desc: "Joki farming candle harian + pengerjaan Daily Quest. Aman 100% manual.",
+    eta: "1-2 Jam",
+    singleSelection: true, // Logic baru: Hanya bisa pilih 1 opsi (Radio Button)
     variants: [
-      { id: 'v_water', name: 'CR (15 Candles) + Daily Quest', price: 5000 },
-      { id: 'v_earth', name: 'CR Grey (20 Candles) + Daily Quest', price: 7000 },
-      { id: 'v_air', name: 'CR Grey (20 Candles) + Daily Quest + Event Ticket*', price: 8000 },
-    ]
+      { id: "cr-15", name: "15 Candle + Daily Quest", price: 5000 },
+      { id: "cr-20", name: "20 Candle + Daily Quest", price: 7000 },
+    ],
   },
+
+  // 3. JOKI WINGED LIGHT
   {
-    id: 'cr_full',
-    name: 'Candle Run',
-    price: 5000,
-    category: 'candlerun',
-    tag: 'Best Seller',
-    desc: 'Lari keliling semua realm + bonus realm. Termasuk Daily Quest & Seasonal Candle.',
-    note: 'Paling worth it buat daily.',
-    eta: '1.5 - 2 Jam',
-    iconType: 'Wind',
-    color: 'bg-amber-400 text-white',
-    blobColor: 'bg-amber-100'
+    id: "wl-all-map",
+    name: "Winged Light (All Map)",
+    category: "special",
+    price: 5000, // Harga Pas
+    discountPrice: 0,
+    iconType: "star",
+    tag: "Re-run",
+    desc: "Joki ambil ulang semua Winged Light (WL) yang hilang dari Isle sampai Vault.",
+    eta: "2 Jam",
   },
-  {
-    id: 'cr_grey',
-    name: 'CR Sampai Abu (Grey Candle)',
-    price: 7000,
-    category: 'candlerun',
-    tag: 'Hardcore',
-    desc: 'Farming lilin sampai indikator lilin kamu jadi warna abu-abu (Limit Harian Mentok).',
-    note: 'Cocok buat ngejar Traveling Spirit.',
-    eta: '2 - 2.5 Jam',
-    iconType: 'Flame',
-    color: 'bg-slate-600 text-white',
-    blobColor: 'bg-slate-200'
-  },
-  {
-    id: 'cr_daily',
-    name: 'Daily Quest + Seasonal Only',
-    price: 2000,
-    category: 'candlerun',
-    tag: 'Harian',
-    desc: 'Cuma ngerjain 4 misi harian + ambil lilin season.',
-    note: 'Cepat & Praktis.',
-    eta: '15-20 Menit',
-    iconType: 'Sparkles',
-    color: 'bg-sky-400 text-white',
-    blobColor: 'bg-sky-100'
-  },
-  // --- HEART (CALCULATOR) ---
-  {
-    id: 'heart_calculator',
-    name: 'Custom Heart (Hitung Sendiri)',
-    price: 3000, 
-    category: 'heart',
-    tag: 'Calculator', 
-    desc: 'Butuh 10, 50, atau 100 heart? Hitung budget dan bonus kamu di sini! Sesuaikan dengan slot bot.',
-    note: 'Klik Hitung untuk kalkulator.',
-    eta: 'Tergantung Qty',
-    iconType: 'Heart',
-    color: 'bg-rose-500 text-white',
-    blobColor: 'bg-rose-100',
-    isCalculator: true 
-  },
-  // --- SPECIAL ---
-  {
-    id: 'eden_run',
-    name: 'Eden Run (Full Statues)',
-    price: 10000,
-    category: 'special',
-    tag: 'Mingguan',
-    desc: 'Mencairkan semua patung di Eye of Eden. Max Ascended Candle.',
-    note: 'Reset tiap Minggu.',
-    eta: '30-45 Menit',
-    iconType: 'Star',
-    color: 'bg-red-500 text-white',
-    blobColor: 'bg-red-100'
-  },
-  {
-    id: 'wing_run',
-    name: 'Winged Light (WL) Run',
-    price: 15000,
-    category: 'special',
-    tag: 'Re-collect',
-    desc: 'Mengambil ulang semua WL yang ada di map (non-trial).',
-    note: 'Berguna habis kena krill/Eden.',
-    eta: '1 - 1.5 Jam',
-    iconType: 'Sparkles',
-    color: 'bg-emerald-400 text-white',
-    blobColor: 'bg-emerald-100'
-  }
 ];

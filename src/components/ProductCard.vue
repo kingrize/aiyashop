@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { useCartStore } from "../stores/cart"; // 1. Restore Cart Store
 import {
     Sparkles,
     Moon,
@@ -11,15 +12,15 @@ import {
     Zap,
     ChevronRight,
     Plus,
+    ShoppingBag,
 } from "lucide-vue-next";
 
-// HAPUS IMPOR LOGIC, VARIANT, DLL. KITA BUAT SIMPLE.
 const props = defineProps({
     product: { type: Object, required: true },
 });
 
-// Event ke Parent (HomeView)
 const emit = defineEmits(["open-detail"]);
+const cart = useCartStore(); // 2. Init Cart
 
 const iconComponent = computed(() => {
     const map = {
@@ -34,7 +35,16 @@ const iconComponent = computed(() => {
     return map[props.product.iconType?.toLowerCase()] || Sparkles;
 });
 
-// Styling Logic (Disederhanakan)
+// 3. Logic Cek Apakah Produk Kompleks (Butuh Modal) atau Simpel
+const isComplex = computed(() => {
+    return (
+        props.product.isCalculator === true ||
+        (Array.isArray(props.product.variants) &&
+            props.product.variants.length > 0)
+    );
+});
+
+// Styling Logic
 const theme = computed(() => {
     const type = props.product.category;
     if (type === "heart" || props.product.isCalculator)
@@ -68,6 +78,17 @@ const formatCurrency = (val) =>
         currency: "IDR",
         maximumFractionDigits: 0,
     }).format(val || 0);
+
+// 4. Handler Pintar
+const handleButtonClick = () => {
+    if (isComplex.value) {
+        // Jika butuh opsi (Calculator/Varian), buka Modal
+        emit("open-detail", props.product);
+    } else {
+        // Jika simpel, langsung masuk keranjang!
+        cart.addToCart(props.product);
+    }
+};
 </script>
 
 <template>
@@ -129,7 +150,8 @@ const formatCurrency = (val) =>
                 class="mt-auto flex items-center justify-between pt-4 border-t border-slate-200/50 dark:border-white/5"
             >
                 <div class="flex flex-col">
-                    <span class="text-[10px] uppercase font-bold text-slate-400"
+                    <span
+                        class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500"
                         >Harga</span
                     >
                     <span
@@ -138,12 +160,22 @@ const formatCurrency = (val) =>
                         {{ formatCurrency(product.price) }}
                     </span>
                 </div>
+
                 <button
-                    class="w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 group-hover:scale-110"
-                    :class="theme.btn"
+                    @click.stop="handleButtonClick"
+                    class="w-10 h-10 rounded-full flex items-center justify-center shadow-md transition-all active:scale-90 group-hover:scale-110 border"
+                    :class="[
+                        isComplex
+                            ? 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700'
+                            : 'bg-indigo-500 text-white border-indigo-500 shadow-indigo-200 dark:shadow-none',
+                    ]"
                 >
-                    <Plus v-if="!product.isCalculator" :size="20" />
-                    <Calculator v-else :size="18" />
+                    <ChevronRight
+                        v-if="isComplex"
+                        :size="20"
+                        stroke-width="2.5"
+                    />
+                    <Plus v-else :size="20" stroke-width="3" />
                 </button>
             </div>
         </div>

@@ -1,15 +1,18 @@
 <script setup>
 import { ref, provide } from "vue";
-import Navbar from "./components/Navbar.vue";
-import Footer from "./components/Footer.vue";
-import BottomNav from "./components/BottomNav.vue"; // 1. Import
-import CartDrawer from "./components/CartDrawer.vue";
-import Toast from "./components/Toast.vue";
 import { RouterView } from "vue-router";
 import { Cloud } from "lucide-vue-next";
 
+// Import Semua Komponen Global
+import Navbar from "./components/Navbar.vue";
+import Footer from "./components/Footer.vue"; // Pastikan file ini ada
+import BottomNav from "./components/BottomNav.vue"; // Pastikan file ini ada
+import CartDrawer from "./components/CartDrawer.vue";
+import Toast from "./components/Toast.vue";
+
 const isLoading = ref(false);
 
+// Provide fungsi loading ke semua child component
 provide("globalLoading", {
     start: () => (isLoading.value = true),
     finish: () => (isLoading.value = false),
@@ -18,7 +21,7 @@ provide("globalLoading", {
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col pb-20 md:pb-0"
+        class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col pb-20 md:pb-0 transition-colors duration-300"
     >
         <transition name="fade">
             <div
@@ -54,12 +57,16 @@ provide("globalLoading", {
         </main>
 
         <Footer />
-        <BottomNav /> <CartDrawer />
+
+        <BottomNav />
+
+        <CartDrawer />
         <Toast />
     </div>
 </template>
 
 <style scoped>
+/* Transisi Global Loader */
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;
@@ -69,6 +76,7 @@ provide("globalLoading", {
     opacity: 0;
 }
 
+/* Transisi Halaman yang Halus */
 .page-fade-enter-active,
 .page-fade-leave-active {
     transition:

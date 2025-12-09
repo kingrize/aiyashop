@@ -1,7 +1,14 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useCartStore } from "../stores/cart";
-import { X, Check, Plus, Heart, ShoppingBag } from "lucide-vue-next";
+import {
+    X,
+    Check,
+    Plus,
+    Heart,
+    ShoppingBag,
+    CheckCircle,
+} from "lucide-vue-next"; // Tambah CheckCircle
 import MiniHeartCalculator from "./MiniHeartCalculator.vue";
 
 const props = defineProps({
@@ -13,7 +20,6 @@ const emit = defineEmits(["close"]);
 const cart = useCartStore();
 const selectedVariants = ref([]);
 
-// Reset state saat modal dibuka/ditutup
 const isCalculator = computed(() => props.product?.isCalculator === true);
 const hasVariants = computed(
     () =>
@@ -40,11 +46,34 @@ const formatCurrency = (val) =>
         maximumFractionDigits: 0,
     }).format(val || 0);
 
-// Actions
+// --- LOGIKA PEMILIHAN VARIAN (UX UPGRADE) ---
 const toggleVariant = (variant) => {
+    // 1. Kasus Single Selection (Radio Button) - Contoh: CR 15 vs 20
+    if (props.product?.singleSelection) {
+        selectedVariants.value = [variant];
+        return;
+    }
+
+    // 2. Kasus Bundle (Contoh: Trials)
+    // Jika user memilih varian Bundle
+    if (variant.isBundle) {
+        // Hapus semua pilihan lain, pilih hanya bundle ini
+        selectedVariants.value = [variant];
+        return;
+    }
+
+    // Jika user memilih varian BIASA
     const index = selectedVariants.value.findIndex((v) => v.id === variant.id);
-    if (index === -1) selectedVariants.value.push(variant);
-    else selectedVariants.value.splice(index, 1);
+    if (index === -1) {
+        // Sebelum menambah varian biasa, cek apakah ada Bundle yang sedang aktif?
+        // Jika ada, hapus Bundle-nya dulu (karena user ingin custom satuan)
+        selectedVariants.value = selectedVariants.value.filter(
+            (v) => !v.isBundle,
+        );
+        selectedVariants.value.push(variant);
+    } else {
+        selectedVariants.value.splice(index, 1);
+    }
 };
 
 const isSelected = (variantId) =>
@@ -113,7 +142,9 @@ const onCalculatorAdd = (item) => {
                                 isCalculator
                                     ? "Kalkulator"
                                     : hasVariants
-                                      ? "Pilih Varian"
+                                      ? product?.singleSelection
+                                          ? "Pilih Salah Satu"
+                                          : "Pilih Varian"
                                       : "Konfirmasi"
                             }}
                         </p>
@@ -135,11 +166,6 @@ const onCalculatorAdd = (item) => {
                     </div>
 
                     <div v-else-if="hasVariants" class="space-y-3">
-                        <p
-                            class="text-xs font-bold text-slate-400 uppercase tracking-widest"
-                        >
-                            Opsi Tersedia:
-                        </p>
                         <div
                             v-for="variant in product.variants"
                             :key="variant.id"
@@ -154,26 +180,43 @@ const onCalculatorAdd = (item) => {
                             <div class="flex items-center gap-3">
                                 <div
                                     class="w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors"
-                                    :class="
+                                    :class="[
                                         isSelected(variant.id)
                                             ? 'border-sky-500 bg-sky-500'
-                                            : 'border-slate-300 dark:border-slate-600 bg-transparent'
-                                    "
+                                            : 'border-slate-300 dark:border-slate-600 bg-transparent',
+                                        product?.singleSelection
+                                            ? 'rounded-full'
+                                            : 'rounded-lg', // Visual beda (Bulat vs Kotak)
+                                    ]"
                                 >
+                                    <div
+                                        v-if="
+                                            product?.singleSelection &&
+                                            isSelected(variant.id)
+                                        "
+                                        class="w-2.5 h-2.5 bg-white rounded-full"
+                                    ></div>
                                     <Check
-                                        v-if="isSelected(variant.id)"
+                                        v-else-if="isSelected(variant.id)"
                                         :size="14"
                                         class="text-white"
                                         stroke-width="4"
                                     />
                                 </div>
-                                <span
-                                    class="font-bold text-slate-700 dark:text-slate-200"
-                                    >{{ variant.name }}</span
-                                >
+                                <div class="flex flex-col">
+                                    <span
+                                        class="font-bold text-slate-700 dark:text-slate-200 text-sm"
+                                        >{{ variant.name }}</span
+                                    >
+                                    <span
+                                        v-if="variant.isBundle"
+                                        class="text-[10px] text-sky-500 font-bold"
+                                        >Hemat & Praktis!</span
+                                    >
+                                </div>
                             </div>
                             <span
-                                class="font-bold text-sky-600 dark:text-sky-400"
+                                class="font-bold text-sky-600 dark:text-sky-400 text-sm"
                                 >{{ formatCurrency(variant.price) }}</span
                             >
                         </div>
@@ -189,6 +232,11 @@ const onCalculatorAdd = (item) => {
                                 <ShoppingBag :size="24" />
                             </div>
                             <div>
+                                <p
+                                    class="font-bold text-slate-700 dark:text-slate-200 text-sm mb-1"
+                                >
+                                    Deskripsi Paket:
+                                </p>
                                 <p
                                     class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"
                                 >

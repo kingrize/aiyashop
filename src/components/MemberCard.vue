@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from "vue";
 import { useUserStore } from "../stores/user";
-import { Cloud, Sparkles } from "lucide-vue-next";
+import { Star, Shield, Sparkles, CloudFog } from "lucide-vue-next";
 
 const userStore = useUserStore();
 const cardRef = ref(null);
@@ -9,13 +9,10 @@ const cardRef = ref(null);
 // State Visual
 const transformString = ref("");
 const glareString = ref("");
-const opacity = ref(0);
-
-// Animation Frame
 let rafId = null;
 let isMobile = false;
 
-// --- LOGIC LEVEL (Tetap Sama) ---
+// --- LOGIC LEVEL BARU (Tema Sky) ---
 const memberLevel = computed(() => {
     const totalSpent =
         userStore.memberData?.totalTopUp || userStore.memberData?.saldo || 0;
@@ -23,37 +20,49 @@ const memberLevel = computed(() => {
     if (totalSpent > 1000000)
         return {
             name: "Elder",
-            emoji: "👑",
-            bg: "bg-gradient-to-br from-[#BF953F] via-[#FCF6BA] to-[#B38728]",
-            text: "text-amber-900",
-            particle: "bg-amber-400",
-            border: "border-amber-200/50",
+            wedges: 11, // Jumlah sayap
+            // Gold/White Glowing Theme
+            bg: "bg-gradient-to-br from-[#FDBB2D] via-[#F7C59F] to-[#EF629F]",
+            accent: "text-amber-900",
+            border: "border-amber-300/50",
+            shadow: "shadow-amber-500/30",
+            starColor:
+                "text-amber-100 fill-amber-100 filter drop-shadow-[0_0_10px_rgba(251,191,36,0.8)]",
         };
     if (totalSpent > 500000)
         return {
             name: "Phoenix",
-            emoji: "🔥",
-            bg: "bg-gradient-to-br from-rose-600 via-orange-500 to-red-600",
-            text: "text-white",
-            particle: "bg-orange-200",
-            border: "border-rose-400/50",
+            wedges: 9,
+            // Red/Orange Sunset Theme
+            bg: "bg-gradient-to-br from-[#FF512F] via-[#F09819] to-[#FF512F]",
+            accent: "text-white",
+            border: "border-orange-300/50",
+            shadow: "shadow-orange-500/30",
+            starColor:
+                "text-orange-100 fill-orange-100 filter drop-shadow-[0_0_10px_rgba(249,115,22,0.8)]",
         };
     if (totalSpent > 100000)
         return {
             name: "Butterfly",
-            emoji: "🦋",
-            bg: "bg-gradient-to-br from-indigo-500 via-purple-500 to-fuchsia-600",
-            text: "text-white",
-            particle: "bg-fuchsia-200",
+            wedges: 7,
+            // Blue/Purple Night Sky Theme
+            bg: "bg-gradient-to-br from-[#4A00E0] via-[#8E2DE2] to-[#4A00E0]",
+            accent: "text-white",
             border: "border-indigo-300/50",
+            shadow: "shadow-indigo-500/30",
+            starColor:
+                "text-indigo-100 fill-indigo-100 filter drop-shadow-[0_0_10px_rgba(99,102,241,0.8)]",
         };
     return {
         name: "Moth",
-        emoji: "🕯️",
-        bg: "bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800",
-        text: "text-slate-200",
-        particle: "bg-slate-400",
-        border: "border-slate-500/50",
+        wedges: 5,
+        // Brownish/Cyan Daylight Theme
+        bg: "bg-gradient-to-br from-[#78869B] via-[#B4C6D8] to-[#78869B]",
+        accent: "text-slate-800",
+        border: "border-slate-400/50",
+        shadow: "shadow-slate-400/30",
+        starColor:
+            "text-slate-100 fill-slate-100 filter drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]",
     };
 });
 
@@ -64,10 +73,9 @@ const formatRupiah = (val) =>
         maximumFractionDigits: 0,
     }).format(val || 0);
 
-// --- 1. DESKTOP LOGIC (MOUSE) ---
+// --- GYROSCOPE & TILT EFFECT (Sama seperti sebelumnya, dioptimalkan) ---
 const handleMouseMove = (e) => {
-    if (isMobile || !cardRef.value) return; // Skip jika mobile
-
+    if (isMobile || !cardRef.value) return;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
         const rect = cardRef.value.getBoundingClientRect();
@@ -75,201 +83,163 @@ const handleMouseMove = (e) => {
         const y = e.clientY - rect.top;
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-
-        const rotateY = ((x - centerX) / centerX) * 10;
-        const rotateX = -((y - centerY) / centerY) * 10;
-
+        const rotateY = ((x - centerX) / centerX) * 8;
+        const rotateX = -((y - centerY) / centerY) * 8;
         transformString.value = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-
         const glareX = (x / rect.width) * 100;
         const glareY = (y / rect.height) * 100;
-        glareString.value = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 50%)`;
-        opacity.value = 1;
+        glareString.value = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 50%)`;
     });
 };
-
 const handleMouseLeave = () => {
     if (isMobile) return;
     if (rafId) cancelAnimationFrame(rafId);
     transformString.value =
         "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)";
-    opacity.value = 0;
+    glareString.value = "";
 };
-
-// --- 2. MOBILE LOGIC (GYROSCOPE) ---
 const handleOrientation = (event) => {
     if (!isMobile || !cardRef.value) return;
-
     if (rafId) cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(() => {
-        // Gamma: Kiri/Kanan (-90 to 90)
-        // Beta: Depan/Belakang (-180 to 180)
         let x = event.gamma || 0;
         let y = event.beta || 0;
-
-        // Batasi sudut agar tidak terbalik (Clamp)
         if (x > 20) x = 20;
         if (x < -20) x = -20;
         if (y > 40) y = 40;
         if (y < -40) y = -40;
-
-        // Kurangi offset awal (biasanya orang pegang HP agak miring sekitar 30deg)
         y = y - 30;
-
-        // Kalkulasi Rotasi Halus
-        const rotateY = x * 0.5; // Sensitivity
+        const rotateY = x * 0.5;
         const rotateX = -y * 0.5;
-
         transformString.value = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1, 1, 1)`;
-
-        // Glare bergerak otomatis berlawanan arah tilt
         const glareX = 50 + x * 2;
         const glareY = 50 + y * 2;
-        glareString.value = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0) 60%)`;
-        opacity.value = 0.8; // Selalu terlihat sedikit di mobile
+        glareString.value = `radial-gradient(circle at ${glareX}% ${glareY}%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 60%)`;
     });
 };
 
 onMounted(() => {
-    // Deteksi apakah device support touch (Mobile/Tablet)
     isMobile = window.matchMedia("(pointer: coarse)").matches;
-
-    if (isMobile) {
-        // Cek support Gyroscope
-        if (window.DeviceOrientationEvent) {
-            window.addEventListener("deviceorientation", handleOrientation);
-        }
-
-        // Default animation jika HP diletakkan di meja (Breathing Effect)
+    if (isMobile && window.DeviceOrientationEvent) {
+        window.addEventListener("deviceorientation", handleOrientation);
         transformString.value =
             "perspective(1000px) rotateX(0deg) rotateY(0deg)";
     }
 });
-
 onUnmounted(() => {
     if (rafId) cancelAnimationFrame(rafId);
-    if (isMobile) {
+    if (isMobile)
         window.removeEventListener("deviceorientation", handleOrientation);
-    }
 });
 </script>
 
 <template>
-    <div class="w-full h-full">
+    <div class="w-full h-full py-2">
         <div
             ref="cardRef"
-            class="relative w-full aspect-[1.58/1] rounded-[1.5rem] md:rounded-[2rem] shadow-xl md:shadow-2xl overflow-hidden select-none card-smooth will-change-transform"
+            class="relative w-full aspect-[1.5/1] md:aspect-[1.6/1] rounded-[2rem] shadow-2xl overflow-hidden select-none card-smooth will-change-transform border-2"
             @mousemove="handleMouseMove"
             @mouseleave="handleMouseLeave"
             :style="{ transform: transformString }"
-            :class="[memberLevel.bg, memberLevel.border, 'border']"
+            :class="[memberLevel.bg, memberLevel.border, memberLevel.shadow]"
         >
             <div
-                class="absolute inset-0 opacity-30 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay pointer-events-none z-0"
+                class="absolute inset-0 opacity-20 mix-blend-overlay pointer-events-none z-0"
+                style="
+                    background-image: url(&quot;data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l15 30-15 30L15 30z' fill='%23ffffff' fill-opacity='0.4' fill-rule='evenodd'/%3E%3C/svg%3E&quot;);
+                    background-size: 30px 30px;
+                "
+            ></div>
+            <div
+                class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent mix-blend-overlay z-0"
             ></div>
 
             <div
-                class="absolute inset-0 overflow-hidden pointer-events-none z-0"
-            >
-                <div
-                    v-for="n in 5"
-                    :key="n"
-                    class="absolute rounded-full animate-float opacity-40 blur-sm"
-                    :class="memberLevel.particle"
-                    :style="{
-                        width: Math.random() * 6 + 2 + 'px',
-                        height: Math.random() * 6 + 2 + 'px',
-                        left: Math.random() * 100 + '%',
-                        top: Math.random() * 100 + '%',
-                        animationDuration: Math.random() * 5 + 5 + 's',
-                        animationDelay: Math.random() * 2 + 's',
-                    }"
-                ></div>
-            </div>
+                class="absolute inset-1 rounded-[1.8rem] border-2 border-white/30 opacity-50 z-10 pointer-events-none"
+            ></div>
 
             <div
-                class="absolute inset-0 pointer-events-none mix-blend-soft-light transition-opacity duration-700 ease-out z-10"
-                :style="{
-                    background: glareString,
-                    opacity: opacity,
-                }"
+                class="absolute inset-0 pointer-events-none mix-blend-soft-light transition-all duration-500 ease-out z-20"
+                :style="{ background: glareString }"
             >
                 <div
                     v-if="isMobile"
-                    class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full animate-shimmer"
+                    class="absolute inset-0 w-[200%] h-full bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full animate-shimmer"
                 ></div>
             </div>
 
             <div
-                class="relative z-20 h-full flex flex-col justify-between p-5 md:p-6 transform translate-z-10"
+                class="relative z-30 h-full flex flex-col justify-between p-5 md:p-6 transform translate-z-10"
             >
                 <div class="flex justify-between items-start">
                     <div class="flex items-center gap-2">
                         <div
-                            class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 shadow-inner"
+                            class="px-2.5 py-1 rounded-full bg-white/20 backdrop-blur-md border border-white/40 shadow-sm flex items-center gap-1.5"
                         >
-                            <Cloud :size="14" :class="memberLevel.text" />
+                            <Shield
+                                :size="14"
+                                :class="memberLevel.accent"
+                                class="fill-current opacity-80"
+                            />
+                            <span
+                                class="text-[10px] md:text-xs font-black uppercase tracking-wider"
+                                :class="memberLevel.accent"
+                                >{{ memberLevel.name }} Rank</span
+                            >
                         </div>
-                        <span
-                            class="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-80"
-                            :class="memberLevel.text"
-                            >Aiya<span class="text-white/70">Card</span></span
-                        >
                     </div>
-                    <span
-                        class="text-2xl md:text-3xl filter drop-shadow-lg animate-pulse"
-                        >{{ memberLevel.emoji }}</span
-                    >
+                    <div class="flex items-center gap-1">
+                        <Star
+                            v-for="i in memberLevel.wedges"
+                            :key="i"
+                            :size="12"
+                            :class="memberLevel.starColor"
+                            class="animate-pulse-slow"
+                            :style="{ animationDelay: `${i * 0.1}s` }"
+                        />
+                    </div>
                 </div>
 
-                <div class="space-y-3 md:space-y-4">
-                    <div
-                        class="w-9 h-7 md:w-10 md:h-8 rounded-md bg-gradient-to-tr from-yellow-200 to-yellow-500 border border-yellow-600/30 shadow-inner flex items-center justify-center relative overflow-hidden group"
-                    >
-                        <div
-                            class="absolute inset-0 border-[0.5px] border-black/10 opacity-50 rounded-md"
-                            style="
-                                background-image: repeating-linear-gradient(
-                                    90deg,
-                                    transparent,
-                                    transparent 4px,
-                                    rgba(0, 0, 0, 0.1) 4px,
-                                    rgba(0, 0, 0, 0.1) 5px
-                                );
-                            "
-                        ></div>
-                        <div
-                            class="absolute inset-0 bg-white/40 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 skew-x-12 animate-shimmer-slow"
-                        ></div>
-                    </div>
+                <div class="flex items-center justify-between">
                     <div>
                         <p
-                            class="text-[8px] md:text-[10px] font-bold uppercase opacity-70 mb-0.5"
-                            :class="memberLevel.text"
+                            class="text-[9px] md:text-[10px] font-bold uppercase opacity-70 mb-0.5"
+                            :class="memberLevel.accent"
                         >
-                            Total Saldo
+                            Saldo Candle
                         </p>
                         <h2
-                            class="text-2xl md:text-4xl font-black tracking-tighter"
-                            :class="memberLevel.text"
-                            style="text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1)"
+                            class="text-2xl md:text-4xl font-black tracking-tighter filter drop-shadow-sm"
+                            :class="memberLevel.accent"
                         >
                             {{ formatRupiah(userStore.memberData?.saldo) }}
                         </h2>
+                    </div>
+                    <div
+                        class="relative w-16 h-16 md:w-20 md:h-20 flex items-center justify-center animate-float-slow"
+                    >
+                        <Star
+                            :size="64"
+                            :class="memberLevel.starColor"
+                            class="absolute blur-md opacity-50 animate-pulse-slow"
+                        />
+                        <Star
+                            :size="48"
+                            :class="memberLevel.starColor"
+                            class="relative z-10 md:w-[56px] md:h-[56px]"
+                        />
+                        <Sparkles
+                            :size="20"
+                            class="absolute top-0 right-0 text-white animate-ping-slow"
+                        />
                     </div>
                 </div>
 
                 <div class="flex justify-between items-end">
                     <div>
                         <p
-                            class="text-[8px] md:text-[9px] font-bold uppercase opacity-60 mb-0.5"
-                            :class="memberLevel.text"
-                        >
-                            Member Name
-                        </p>
-                        <p
-                            class="font-bold text-base md:text-lg tracking-wide uppercase truncate max-w-[120px] md:max-w-[150px]"
-                            :class="memberLevel.text"
+                            class="font-bold text-sm md:text-lg tracking-wide uppercase truncate max-w-[150px]"
+                            :class="memberLevel.accent"
                             style="text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1)"
                         >
                             {{
@@ -277,71 +247,82 @@ onUnmounted(() => {
                                 userStore.user.displayName
                             }}
                         </p>
-                    </div>
-                    <div
-                        class="flex items-center gap-1 px-2.5 py-0.5 md:px-3 md:py-1 rounded-full bg-black/10 backdrop-blur-sm border border-white/10"
-                    >
-                        <Sparkles :size="10" :class="memberLevel.text" />
-                        <span
-                            class="text-[9px] md:text-[10px] font-bold uppercase"
-                            :class="memberLevel.text"
-                            >{{ memberLevel.name }}</span
-                        >
+                        <div class="flex items-center gap-1 opacity-60">
+                            <CloudFog :size="12" :class="memberLevel.accent" />
+                            <p
+                                class="text-[8px] md:text-[9px] font-bold uppercase"
+                                :class="memberLevel.accent"
+                            >
+                                Sky Kid ID: {{ userStore.user.uid.slice(0, 8) }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
-
-            <div
-                class="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-white/10 to-transparent pointer-events-none z-10"
-            ></div>
         </div>
     </div>
 </template>
 
 <style scoped>
 .card-smooth {
-    /* Transition ini membuat gerakan Gyroscope mulus, tidak patah-patah */
     transition: transform 0.1s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-
 .will-change-transform {
     will-change: transform;
 }
+.translate-z-10 {
+    transform: translateZ(30px);
+}
 
-/* Animasi mengambang partikel */
+/* Animations */
 @keyframes float {
     0%,
     100% {
-        transform: translateY(0) translateX(0);
-        opacity: 0.2;
+        transform: translateY(0);
     }
     50% {
-        transform: translateY(-20px) translateX(10px);
-        opacity: 0.6;
+        transform: translateY(-8px);
     }
 }
-.animate-float {
-    animation: float infinite ease-in-out;
+.animate-float-slow {
+    animation: float 5s ease-in-out infinite;
 }
 
-/* Animasi kilauan otomatis untuk Mobile */
+@keyframes pulse-glow {
+    0%,
+    100% {
+        opacity: 0.8;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+}
+.animate-pulse-slow {
+    animation: pulse-glow 3s ease-in-out infinite;
+}
+
 @keyframes shimmer {
     0% {
-        transform: translateX(-150%) skewX(-15deg);
+        transform: translateX(-150%) skewX(-20deg);
     }
-    50%,
     100% {
-        transform: translateX(150%) skewX(-15deg);
+        transform: translateX(150%) skewX(-20deg);
     }
 }
 .animate-shimmer {
-    animation: shimmer 4s infinite ease-in-out;
-}
-.animate-shimmer-slow {
-    animation: shimmer 6s infinite ease-in-out;
+    animation: shimmer 5s infinite linear;
 }
 
-.translate-z-10 {
-    transform: translateZ(30px);
+@keyframes ping-slow {
+    75%,
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+.animate-ping-slow {
+    animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 </style>

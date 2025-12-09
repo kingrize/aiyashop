@@ -25,6 +25,9 @@ import {
     CheckCircle2,
     AlertCircle,
     Check,
+    Zap,
+    ArrowRight,
+    ShieldCheck,
 } from "lucide-vue-next";
 import {
     doc,
@@ -44,13 +47,11 @@ const promoInput = ref("");
 const promoMessage = ref("");
 const selectedPayment = ref("qris");
 
-// State Modal & Loading
 const showConfirmModal = ref(false);
 const showSuccessModal = ref(false);
 const isProcessingPayment = ref(false);
 const countdown = ref(3);
 
-// State Form Auth Mini
 const isRegisterMode = ref(false);
 const authForm = reactive({ name: "", username: "", password: "" });
 const isAuthLoading = ref(false);
@@ -64,9 +65,39 @@ watch(
     },
 );
 
+const finalTotalComputed = computed(() =>
+    promoStore.activeCode && isPromoEligible.value
+        ? promoStore.calculateTotal(store.totalPrice)
+        : store.totalPrice,
+);
+
+const memberBalanceAfter = computed(() => {
+    return (userStore.memberData?.saldo || 0) - finalTotalComputed.value;
+});
+
+// --- HELPERS ---
 const getIcon = (type) => {
-    const icons = { Wind, Star, Heart, Flame, Cloud, Sparkles, Moon };
-    return icons[type] || Sparkles;
+    const map = {
+        wind: Wind,
+        star: Star,
+        heart: Heart,
+        flame: Flame,
+        cloud: Cloud,
+        sparkles: Sparkles,
+        moon: Moon,
+        zap: Zap,
+    };
+    return map[type?.toLowerCase()] || Sparkles;
+};
+
+const getItemTheme = (item) => {
+    if (item.category === "heart")
+        return "bg-rose-100 text-rose-500 dark:bg-rose-900/30 dark:text-rose-400";
+    if (item.category === "candlerun")
+        return "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400";
+    if (item.category === "special")
+        return "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400";
+    return "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
 };
 
 const formatRupiah = (num) =>
@@ -91,26 +122,25 @@ const handleApplyPromo = async () => {
 
 const handleAuthSubmit = async () => {
     isAuthLoading.value = true;
-    if (isRegisterMode.value) {
-        if (!authForm.name || !authForm.username || !authForm.password) {
-            alert("Isi semua data dulu ya!");
-            isAuthLoading.value = false;
-            return;
+    try {
+        if (isRegisterMode.value) {
+            if (!authForm.name || !authForm.username || !authForm.password)
+                throw new Error("Isi semua data!");
+            await userStore.register(
+                authForm.name,
+                authForm.username + "@aiyashop.com",
+                authForm.password,
+            );
+        } else {
+            if (!authForm.username || !authForm.password)
+                throw new Error("Username & Password wajib!");
+            await userStore.login(authForm.username, authForm.password);
         }
-        await userStore.register(
-            authForm.name,
-            authForm.username + "@aiyashop.com",
-            authForm.password,
-        );
-    } else {
-        if (!authForm.username || !authForm.password) {
-            alert("Username & Password wajib diisi!");
-            isAuthLoading.value = false;
-            return;
-        }
-        await userStore.login(authForm.username, authForm.password);
+    } catch (e) {
+        alert(e.message || "Gagal login");
+    } finally {
+        isAuthLoading.value = false;
     }
-    isAuthLoading.value = false;
 };
 
 const handleCheckoutClick = () => {
@@ -121,17 +151,10 @@ const handleCheckoutClick = () => {
             alert("Silakan login dulu ya kak! 😊");
             return;
         }
-
-        const finalTotal =
-            promoStore.activeCode && isPromoEligible.value
-                ? promoStore.calculateTotal(store.totalPrice)
-                : store.totalPrice;
-
-        if (userStore.memberData?.saldo < finalTotal) {
+        if (userStore.memberData?.saldo < finalTotalComputed.value) {
             alert("Yah, saldo member kakak kurang nih 🥺 Topup dulu yuk!");
             return;
         }
-
         showConfirmModal.value = true;
     } else {
         processCheckout("Menunggu Pembayaran (QRIS)");
@@ -140,43 +163,45 @@ const handleCheckoutClick = () => {
 
 const confirmMemberPayment = async () => {
     isProcessingPayment.value = true;
-    const finalTotal =
-        promoStore.activeCode && isPromoEligible.value
-            ? promoStore.calculateTotal(store.totalPrice)
-            : store.totalPrice;
+    const total = finalTotalComputed.value;
 
     try {
-        // 1. Potong Saldo
         const userRef = doc(db, "users", userStore.user.uid);
         await updateDoc(userRef, {
-            saldo: increment(-finalTotal),
+            saldo: increment(-total),
             totalTopUp: increment(0),
         });
 
-        // 2. CATAT RIWAYAT TRANSAKSI (NEW FEATURE)
-        const summaryItems = store.items
-            .map((i) => `${i.name} (${i.qty}x)`)
-            .join(", ");
-        await addDoc(
-            collection(db, "users", userStore.user.uid, "transactions"),
-            {
-                type: "expense", // 'income' untuk topup, 'expense' untuk beli
-                title: "Pembelian Joki",
-                desc: summaryItems,
-                amount: finalTotal,
-                createdAt: serverTimestamp(),
-                status: "success",
-            },
-        );
-
-        // 3. Refresh Data
         await userStore.fetchMemberData();
-        await userStore.fetchTransactions(); // Refresh list history juga
+
+        try {
+            const summaryItems = store.items
+                .map((i) => `${i.name} (${i.qty}x)`)
+                .join(", ");
+            await addDoc(
+                collection(db, "users", userStore.user.uid, "transactions"),
+                {
+                    type: "expense",
+                    title: "Pembelian Joki",
+                    desc: summaryItems,
+                    amount: total,
+                    createdAt: serverTimestamp(),
+                    status: "success",
+                },
+            );
+            if (userStore.fetchTransactions)
+                await userStore.fetchTransactions();
+        } catch (historyError) {
+            console.warn("Gagal mencatat history:", historyError);
+        }
 
         showConfirmModal.value = false;
         showSuccessModal.value = true;
-        countdown.value = 3;
 
+        store.clearCart();
+        promoStore.resetPromo();
+
+        countdown.value = 3;
         const timer = setInterval(() => {
             countdown.value--;
             if (countdown.value <= 0) {
@@ -184,15 +209,13 @@ const confirmMemberPayment = async () => {
                 processCheckout("LUNAS (Saldo Member)");
                 setTimeout(() => {
                     showSuccessModal.value = false;
-                    store.items = [];
-                    promoStore.resetPromo();
                     store.toggleCart();
                 }, 1000);
             }
         }, 1000);
     } catch (error) {
         console.error("Error transaksi:", error);
-        alert("Gagal memproses pembayaran. Coba lagi ya!");
+        alert("Gagal memproses pembayaran. Saldo aman. Coba lagi ya!");
     } finally {
         isProcessingPayment.value = false;
     }
@@ -201,26 +224,33 @@ const confirmMemberPayment = async () => {
 const processCheckout = (statusBayar) => {
     let message = "Halo Admin Aiya! ✨ Saya mau order dong:%0A%0A";
 
-    store.items.forEach((item, index) => {
-        message += `${index + 1}. ${item.name} (${item.qty}x) - ${formatRupiah(item.price * item.qty)}%0A`;
-        if (item.desc) message += `   _${item.desc}_\n`;
-    });
+    if (store.items.length === 0 && statusBayar.includes("LUNAS")) {
+        message += "✅ *Pembayaran LUNAS via Saldo Member*%0A";
+        message +=
+            "Mohon segera diproses ya min! Detail pesanan sudah masuk di sistem.";
+    } else {
+        store.items.forEach((item, index) => {
+            message += `${index + 1}. ${item.name} (${item.qty}x) - ${formatRupiah(item.price * item.qty)}%0A`;
+            if (item.desc) message += `   _${item.desc}_\n`;
+        });
+
+        if (promoStore.activeCode && isPromoEligible.value) {
+            message += `%0A🎟️ Kode Promo: ${promoStore.activeCode}`;
+            message += `%0ADiskon: -${formatRupiah(promoStore.savings(store.totalPrice))}`;
+        }
+
+        const final =
+            promoStore.activeCode && isPromoEligible.value
+                ? promoStore.calculateTotal(store.totalPrice)
+                : store.totalPrice;
+        message += `%0A%0ATotal: *${formatRupiah(final)}*`;
+    }
 
     if (userStore.user) {
         message += `%0A👤 User: ${userStore.user.displayName}`;
         message += `%0A📧 Email: ${userStore.user.email}`;
     }
 
-    if (promoStore.activeCode && isPromoEligible.value) {
-        message += `%0A🎟️ Kode Promo: ${promoStore.activeCode}`;
-        message += `%0ADiskon: -${formatRupiah(promoStore.savings(store.totalPrice))}`;
-    }
-
-    const finalTotal =
-        promoStore.activeCode && isPromoEligible.value
-            ? promoStore.calculateTotal(store.totalPrice)
-            : store.totalPrice;
-    message += `%0A%0ATotal: *${formatRupiah(finalTotal)}*`;
     message += `%0AMetode Bayar: ${selectedPayment.value === "member" ? "💎 Saldo Member" : "QRIS / E-Wallet"}`;
     message += `%0AStatus: *${statusBayar}*`;
 
@@ -298,11 +328,12 @@ const processCheckout = (statusBayar) => {
                         class="bg-white dark:bg-graphite p-4 rounded-3xl border border-sky-50 dark:border-slate-700 shadow-sm flex gap-4 items-start group hover:shadow-md transition relative"
                     >
                         <div
-                            :class="`w-12 h-12 rounded-2xl ${item.color || 'bg-slate-100'} flex items-center justify-center text-white shrink-0 mt-1 shadow-sm`"
+                            :class="`w-12 h-12 rounded-2xl ${getItemTheme(item)} flex items-center justify-center shrink-0 mt-1 shadow-sm`"
                         >
                             <component
                                 :is="getIcon(item.iconType)"
                                 :size="20"
+                                stroke-width="2.5"
                             />
                         </div>
                         <div class="flex-1 min-w-0 pr-8">
@@ -590,7 +621,7 @@ const processCheckout = (statusBayar) => {
                         </div>
                         <div
                             v-if="promoStore.activeCode && isPromoEligible"
-                            class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800 animate-in slide-in-from-left-2"
+                            class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800"
                         >
                             <span class="flex items-center gap-1"
                                 ><Tag :size="12" /> Hemat ({{
@@ -624,7 +655,6 @@ const processCheckout = (statusBayar) => {
                                 }}</span
                             >
                         </div>
-
                         <button
                             @click="handleCheckoutClick"
                             :disabled="
@@ -663,45 +693,106 @@ const processCheckout = (statusBayar) => {
                 class="fixed inset-0 z-[80] flex items-center justify-center p-4"
             >
                 <div
-                    class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+                    class="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity"
                     @click="showConfirmModal = false"
                 ></div>
                 <div
-                    class="bg-white dark:bg-graphite w-full max-w-xs rounded-[2rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 p-6 border-4 border-indigo-50 dark:border-indigo-900 text-center"
+                    class="bg-white dark:bg-charcoal w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 overflow-hidden border border-white/20"
                 >
                     <div
-                        class="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"
+                        class="bg-white dark:bg-slate-900 p-6 pb-4 text-center border-b border-slate-100 dark:border-slate-800"
                     >
-                        🫣
+                        <div
+                            class="w-16 h-16 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-3"
+                        >
+                            <ShieldCheck
+                                :size="32"
+                                class="text-indigo-600 dark:text-indigo-400"
+                            />
+                        </div>
+                        <h3
+                            class="text-xl font-bold text-slate-800 dark:text-slate-100"
+                        >
+                            Konfirmasi Pembayaran
+                        </h3>
+                        <p
+                            class="text-slate-500 dark:text-slate-400 text-xs mt-1"
+                        >
+                            Pastikan saldo kamu cukup ya!
+                        </p>
                     </div>
 
-                    <h3
-                        class="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2"
-                    >
-                        Yakin mau jajan?
-                    </h3>
-                    <p
-                        class="text-sm text-slate-500 dark:text-slate-400 mb-6 leading-relaxed"
-                    >
-                        Saldo kakak bakal kepotong otomatis lho. <br />
-                        <span class="text-rose-500 font-bold text-xs"
-                            >Gabisa refund yaa~</span
-                        >
-                    </p>
+                    <div class="p-6 bg-slate-50 dark:bg-slate-800/50">
+                        <div class="space-y-4">
+                            <div
+                                class="flex justify-between items-center text-sm"
+                            >
+                                <span class="text-slate-500 dark:text-slate-400"
+                                    >Saldo Awal</span
+                                >
+                                <span
+                                    class="font-bold text-slate-700 dark:text-slate-200"
+                                    >{{
+                                        formatRupiah(
+                                            userStore.memberData?.saldo,
+                                        )
+                                    }}</span
+                                >
+                            </div>
 
-                    <div class="flex gap-3">
-                        <button
-                            @click="showConfirmModal = false"
-                            class="flex-1 py-2.5 rounded-xl border-2 border-slate-100 dark:border-slate-700 font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
-                        >
-                            Ntar Dulu
-                        </button>
-                        <button
-                            @click="confirmMemberPayment"
-                            class="flex-1 py-2.5 rounded-xl bg-indigo-500 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-600 transition btn-bouncy"
-                        >
-                            Gass Bayar! 🚀
-                        </button>
+                            <div
+                                class="flex justify-between items-center text-sm"
+                            >
+                                <span class="text-slate-500 dark:text-slate-400"
+                                    >Total Belanja</span
+                                >
+                                <span class="font-bold text-rose-500"
+                                    >-
+                                    {{ formatRupiah(finalTotalComputed) }}</span
+                                >
+                            </div>
+
+                            <div
+                                class="h-px bg-slate-200 dark:bg-slate-700 border-dashed border-t"
+                            ></div>
+
+                            <div
+                                class="flex justify-between items-center bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <div
+                                        class="p-1.5 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600"
+                                    >
+                                        <Wallet :size="16" />
+                                    </div>
+                                    <span
+                                        class="text-xs font-bold text-slate-600 dark:text-slate-300"
+                                        >Sisa Saldo</span
+                                    >
+                                </div>
+                                <span
+                                    class="font-black text-emerald-600 dark:text-emerald-400"
+                                    >{{
+                                        formatRupiah(memberBalanceAfter)
+                                    }}</span
+                                >
+                            </div>
+                        </div>
+
+                        <div class="flex gap-3 mt-6">
+                            <button
+                                @click="showConfirmModal = false"
+                                class="flex-1 py-3.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-slate-700 transition"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                @click="confirmMemberPayment"
+                                class="flex-[2] py-3.5 rounded-xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition btn-bouncy flex items-center justify-center gap-2"
+                            >
+                                Bayar <ArrowRight :size="18" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -713,10 +804,10 @@ const processCheckout = (statusBayar) => {
                 class="fixed inset-0 z-[90] flex items-center justify-center p-4"
             >
                 <div
-                    class="absolute inset-0 bg-emerald-900/30 backdrop-blur-sm transition-opacity"
+                    class="absolute inset-0 bg-slate-900/60 backdrop-blur-md transition-opacity"
                 ></div>
                 <div
-                    class="bg-white dark:bg-graphite w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300 p-8 text-center border-4 border-emerald-50 dark:border-emerald-900"
+                    class="bg-white dark:bg-charcoal w-full max-w-sm rounded-[2.5rem] shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-300 p-8 text-center border-4 border-emerald-50 dark:border-emerald-900"
                 >
                     <div
                         class="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-6 animate-bounce"
@@ -727,21 +818,19 @@ const processCheckout = (statusBayar) => {
                             stroke-width="3"
                         />
                     </div>
-
                     <h3
                         class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mb-2"
                     >
                         Pembayaran Sukses!
                     </h3>
                     <p class="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                        Yeay! Saldo berhasil dipotong. <br />
-                        Mengalihkan ke WhatsApp dalam
+                        Yeay! Saldo berhasil dipotong. <br />Mengalihkan ke
+                        WhatsApp dalam
                         <span
                             class="font-bold text-emerald-600 dark:text-emerald-400"
                             >{{ countdown }}</span
                         >...
                     </p>
-
                     <button
                         class="w-full py-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition"
                         disabled
@@ -774,23 +863,9 @@ const processCheckout = (statusBayar) => {
     background-color: #e2e8f0;
     border-radius: 20px;
 }
-
-/* Dark mode scrollbar thumb */
 :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: rgba(255, 255, 255, 0.1);
 }
-
-/* Remove glow / button box-shadow in dark mode inside this drawer only. */
-:global(.dark) .cart-drawer button,
-:global(.dark) .cart-drawer .btn-bouncy,
-:global(.dark) .cart-drawer .shadow-lg,
-:global(.dark) .cart-drawer .shadow-sm,
-:global(.dark) .cart-drawer .shadow-indigo-200,
-:global(.dark) .cart-drawer .shadow-emerald-100 {
-    box-shadow: none !important;
-    filter: none !important;
-}
-
 :global(.dark) .cart-drawer button:focus {
     box-shadow: none !important;
     outline: 2px solid rgba(255, 255, 255, 0.06);

@@ -4,7 +4,7 @@ import { MapPin } from "lucide-vue-next";
 
 <template>
     <footer
-        class="bg-white dark:bg-charcoal border-t border-slate-100 dark:border-slate-800 py-8 px-6 transition-colors duration-300"
+        class="bg-white dark:bg-charcoal border-t border-slate-100 dark:border-slate-800 py-8 px-6 transition-colors duration-300 md:mb-0 mb-16"
     >
         <div
             class="mx-auto flex max-w-6xl flex-col md:flex-row items-center justify-between gap-6 text-sm text-slate-400 dark:text-slate-500"
