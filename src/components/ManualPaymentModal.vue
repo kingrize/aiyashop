@@ -10,10 +10,13 @@ import {
     Loader2,
     RefreshCw,
     AlertCircle,
+    ShieldCheck,
+    Timer,
+    X,
+    Info,
 } from "lucide-vue-next";
-import qrisStaticImage from "../assets/qris.jpg"; // fallback gambar statis (optional)
+import qrisStaticImage from "../assets/qris.jpg";
 
-// ====== PROPS / EMITS ======
 const props = defineProps({
     isOpen: Boolean,
     totalPrice: Number,
@@ -22,19 +25,20 @@ const props = defineProps({
 
 const emit = defineEmits(["close"]);
 
-// ====== QRIS BASE PAYLOAD (punya kamu) ======
-// Ini QRIS statis kamu (string EMV) yang kamu kirim:
 const BASE_QRIS_PAYLOAD =
     "00020101021126610014COM.GO-JEK.WWW01189360091431999512000210G1999512000303UMI51440014ID.CO.QRIS.WWW0215ID10254602759650303UMI5204549953033605802ID5908aiyashop6006MANADO61059525162070703A0163047950";
 
-// ====== STATE ======
 const activeTab = ref("qris");
+
 const qrisState = ref({
     isLoading: false,
-    data: null, // dataURL PNG hasil generate
+    data: null,
     error: false,
     errorMessage: "",
 });
+
+const loadingStage = ref("Menyiapkan pembayaran…");
+const MIN_LOADING_MS = 850;
 
 const rekening = {
     bank: "DANA / ShopeePay",
@@ -52,7 +56,7 @@ const formatRupiah = (val) =>
         maximumFractionDigits: 0,
     }).format(val || 0);
 
-// ====== EMV QR (TLV) HELPERS ======
+// ===== TLV helpers =====
 function parseTLV(payload) {
     let i = 0;
     const items = [];
@@ -92,7 +96,7 @@ function removeTag(items, tag) {
     if (idx >= 0) items.splice(idx, 1);
 }
 
-// CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF)
+// CRC-16/CCITT-FALSE
 function crc16ccittFalse(str) {
     let crc = 0xffff;
     for (let i = 0; i < str.length; i++) {
@@ -106,18 +110,10 @@ function crc16ccittFalse(str) {
 }
 
 function rebuildWithCRC(payloadWithoutCRC) {
-    // payloadWithoutCRC harus berakhir dengan "6304"
     const crc = crc16ccittFalse(payloadWithoutCRC);
     return payloadWithoutCRC + crc;
 }
 
-/**
- * Membuat payload QRIS baru dengan nominal:
- * - Hapus CRC lama (63)
- * - Set 01=12 (dynamic) (opsional tapi disarankan)
- * - Set 54=amount
- * - Hitung CRC baru
- */
 function makeQrisWithAmount(
     basePayload,
     amountNumber,
@@ -128,27 +124,20 @@ function makeQrisWithAmount(
         throw new Error("Amount harus angka > 0");
     }
 
-    // Parse
     const items = parseTLV(basePayload);
-
-    // Buang CRC lama
     removeTag(items, "63");
 
-    // Set initiation method ke dynamic
-    if (forceDynamic) {
-        upsertTag(items, "01", "12");
-    }
-
-    // Set amount
+    if (forceDynamic) upsertTag(items, "01", "12");
     upsertTag(items, "54", amount);
 
-    // Rebuild + CRC
     const payloadNoCrc = buildTLV(items) + "6304";
     return rebuildWithCRC(payloadNoCrc);
 }
 
-// ====== Generate QR Image Offline ======
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
 const generateDynamicQR = async () => {
+    const startedAt = Date.now();
     qrisState.value = {
         isLoading: true,
         data: null,
@@ -157,28 +146,43 @@ const generateDynamicQR = async () => {
     };
 
     try {
-        const nominal = props.totalPrice;
+        loadingStage.value = "Menyiapkan pembayaran…";
+        await sleep(160);
+        loadingStage.value = "Menyusun QRIS sesuai nominal…";
 
-        // 1) build payload dinamis
-        const newPayload = makeQrisWithAmount(BASE_QRIS_PAYLOAD, nominal, {
-            forceDynamic: true,
-        });
+        const newPayload = makeQrisWithAmount(
+            BASE_QRIS_PAYLOAD,
+            props.totalPrice,
+            {
+                forceDynamic: true,
+            },
+        );
 
-        // 2) generate QR PNG as dataURL
+        await sleep(160);
+        loadingStage.value = "Menghasilkan QR Code…";
+
         const dataUrl = await QRCode.toDataURL(newPayload, {
             margin: 1,
             scale: 8,
             errorCorrectionLevel: "M",
         });
 
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_LOADING_MS) await sleep(MIN_LOADING_MS - elapsed);
+
         qrisState.value.data = dataUrl;
     } catch (err) {
         console.error("❌ Gagal Generate QRIS Offline:", err);
+
+        const elapsed = Date.now() - startedAt;
+        if (elapsed < MIN_LOADING_MS) await sleep(MIN_LOADING_MS - elapsed);
+
         qrisState.value.error = true;
         qrisState.value.errorMessage =
-            "Gagal membuat QRIS (offline). Coba mode manual.";
+            "QR otomatis gagal dibuat. Silakan pakai mode manual.";
     } finally {
         qrisState.value.isLoading = false;
+        loadingStage.value = "Siap";
     }
 };
 
@@ -200,16 +204,15 @@ onMounted(() => {
     if (props.isOpen) generateDynamicQR();
 });
 
-// ====== UTIL UI ======
 const copyToClipboard = async (text, type) => {
     try {
         await navigator.clipboard.writeText(text);
         if (type === "number") {
             copiedNumber.value = true;
-            setTimeout(() => (copiedNumber.value = false), 2000);
+            setTimeout(() => (copiedNumber.value = false), 1400);
         } else {
             copiedTotal.value = true;
-            setTimeout(() => (copiedTotal.value = false), 2000);
+            setTimeout(() => (copiedTotal.value = false), 1400);
         }
     } catch (err) {
         console.error("Gagal copy", err);
@@ -226,236 +229,403 @@ const openWhatsApp = () => {
     emit("close");
 };
 
-const handleRetry = () => {
-    generateDynamicQR();
-};
+const handleRetry = () => generateDynamicQR();
 </script>
 
 <template>
     <div
         v-if="isOpen"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4"
     >
         <div
-            class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+            class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
             @click="$emit('close')"
         ></div>
 
+        <!-- ✅ Tinggi modal dipaksa kompak di mobile -->
         <div
-            class="bg-white dark:bg-slate-900 w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl relative z-10 animate-in zoom-in-95 duration-300 border border-slate-100 dark:border-slate-800 flex flex-col max-h-[90vh]"
+            class="w-full max-w-sm sm:max-w-md relative z-10 overflow-hidden rounded-[1.75rem] sm:rounded-[2.25rem] border border-white/10 shadow-2xl bg-white dark:bg-slate-950 animate-in zoom-in-95 duration-200 flex flex-col max-h-[86vh] sm:max-h-[88vh]"
         >
+            <!-- Header -->
             <div
-                class="bg-slate-50 dark:bg-slate-800/50 p-6 pb-4 text-center border-b border-slate-100 dark:border-slate-800 shrink-0"
+                class="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 bg-gradient-to-b from-indigo-50 to-white dark:from-indigo-950/40 dark:to-slate-950 border-b border-slate-100 dark:border-white/10"
             >
-                <h3 class="text-xl font-black text-slate-800 dark:text-white">
-                    Pembayaran
-                </h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                    Order ID:
-                    <span class="font-mono font-bold">{{ orderId }}</span>
-                </p>
+                <div class="flex items-start justify-between gap-3 min-w-0">
+                    <div class="min-w-0">
+                        <p
+                            class="text-[10px] sm:text-[11px] font-extrabold tracking-widest uppercase text-indigo-600/80 dark:text-indigo-300/80"
+                        >
+                            Secure Checkout
+                        </p>
+                        <h3
+                            class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1 leading-tight"
+                        >
+                            Pembayaran Pesanan
+                        </h3>
 
+                        <!-- ✅ anti overflow -->
+                        <p
+                            class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate"
+                        >
+                            Order ID:
+                            <span class="font-mono font-bold">{{
+                                orderId
+                            }}</span>
+                        </p>
+                    </div>
+
+                    <button
+                        class="shrink-0 w-10 h-10 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition"
+                        @click="$emit('close')"
+                        aria-label="Close"
+                    >
+                        <X :size="18" />
+                    </button>
+                </div>
+
+                <!-- Chips (lebih ringkas di mobile) -->
                 <div
-                    class="flex p-1 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 mt-4 shadow-sm"
+                    class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold"
+                >
+                    <div
+                        class="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-200"
+                    >
+                        <ShieldCheck :size="14" class="text-emerald-500" />
+                        <span class="whitespace-nowrap">Encrypted</span>
+                    </div>
+                    <div
+                        class="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-200"
+                    >
+                        <Timer :size="14" class="text-indigo-500" />
+                        <span class="whitespace-nowrap">Real-time</span>
+                    </div>
+                </div>
+
+                <!-- Tabs: label pendek di mobile, panjang di desktop -->
+                <div
+                    class="mt-3 p-1.5 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex gap-2"
                 >
                     <button
                         @click="activeTab = 'qris'"
-                        class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all"
+                        class="flex-1 py-2.5 rounded-xl font-black transition-all flex items-center justify-center gap-2 overflow-hidden"
                         :class="
                             activeTab === 'qris'
-                                ? 'bg-indigo-500 text-white shadow-md'
-                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-slate-600 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10'
                         "
                     >
-                        <QrCode :size="16" /> QRIS Auto
+                        <QrCode :size="16" class="shrink-0" />
+                        <span
+                            class="text-[11px] sm:text-xs whitespace-nowrap truncate sm:hidden"
+                            >QRIS</span
+                        >
+                        <span
+                            class="hidden sm:inline text-xs whitespace-nowrap truncate"
+                            >QRIS Otomatis</span
+                        >
                     </button>
+
                     <button
                         @click="activeTab = 'manual'"
-                        class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all"
+                        class="flex-1 py-2.5 rounded-xl font-black transition-all flex items-center justify-center gap-2 overflow-hidden"
                         :class="
                             activeTab === 'manual'
-                                ? 'bg-indigo-500 text-white shadow-md'
-                                : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                ? 'bg-indigo-600 text-white shadow-md'
+                                : 'text-slate-600 dark:text-slate-200 hover:bg-white/70 dark:hover:bg-white/10'
                         "
                     >
-                        <CreditCard :size="16" /> Manual
+                        <CreditCard :size="16" class="shrink-0" />
+                        <span
+                            class="text-[11px] sm:text-xs whitespace-nowrap truncate sm:hidden"
+                            >Manual</span
+                        >
+                        <span
+                            class="hidden sm:inline text-xs whitespace-nowrap truncate"
+                            >Transfer Manual</span
+                        >
                     </button>
                 </div>
             </div>
 
-            <div class="p-6 overflow-y-auto custom-scrollbar">
-                <div class="mb-6 text-center space-y-2">
-                    <label
-                        class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"
-                        >Total Tagihan</label
-                    >
-                    <div
-                        class="flex items-center justify-center gap-3 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-2xl border-2 border-dashed border-indigo-200 dark:border-indigo-800/50 cursor-pointer hover:border-indigo-400 transition group"
-                        @click="copyToClipboard(totalPrice.toString(), 'total')"
-                    >
-                        <span
-                            class="text-3xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight group-hover:scale-105 transition-transform"
-                        >
-                            {{ formatRupiah(totalPrice) }}
-                        </span>
-                        <div
-                            class="w-8 h-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center text-indigo-500 shadow-sm"
-                        >
-                            <Check
-                                v-if="copiedTotal"
-                                :size="16"
-                                class="text-emerald-500"
-                            />
-                            <Copy v-else :size="16" />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- TAB QRIS -->
+            <!-- Body (scroll) -->
+            <div
+                class="px-4 sm:px-6 py-4 overflow-y-auto custom-scrollbar flex-1"
+            >
+                <!-- Total card (lebih pendek) -->
                 <div
-                    v-if="activeTab === 'qris'"
-                    class="space-y-4 animate-in slide-in-from-right-4 duration-300"
+                    class="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4"
                 >
                     <div
-                        v-if="qrisState.isLoading"
-                        class="flex flex-col items-center justify-center py-8 space-y-3"
+                        class="flex items-center justify-between gap-3 min-w-0"
                     >
-                        <Loader2
-                            :size="40"
-                            class="text-indigo-500 animate-spin"
-                        />
-                        <p
-                            class="text-xs font-bold text-slate-500 animate-pulse"
-                        >
-                            Sedang generate QRIS (offline)...
-                        </p>
-                    </div>
-
-                    <div
-                        v-else-if="!qrisState.error && qrisState.data"
-                        class="flex flex-col items-center animate-in zoom-in duration-300"
-                    >
-                        <div
-                            class="bg-white p-3 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 relative group"
-                        >
-                            <img
-                                :src="qrisState.data"
-                                alt="QRIS Dynamic"
-                                class="w-56 h-56 object-contain rounded-2xl mix-blend-multiply"
-                            />
-                            <div
-                                class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-slate-900/80 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white flex items-center gap-1 shadow-lg"
-                            >
-                                <RefreshCw
-                                    :size="10"
-                                    class="animate-spin-slow"
-                                />
-                                Auto Nominal
-                            </div>
-                        </div>
-                        <p
-                            class="text-[10px] font-bold text-slate-400 mt-4 uppercase tracking-wide"
-                        >
-                            Scan Sekarang • Nominal Pas
-                        </p>
-                    </div>
-
-                    <div
-                        v-else
-                        class="flex flex-col items-center animate-in zoom-in duration-300"
-                    >
-                        <div
-                            class="bg-white p-3 rounded-3xl shadow-lg border border-slate-200 dark:border-slate-700 relative grayscale opacity-90"
-                        >
-                            <img
-                                :src="qrisStaticImage"
-                                alt="QRIS Static"
-                                class="w-56 h-56 object-contain rounded-2xl"
-                            />
-                            <div
-                                class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-rose-500/90 backdrop-blur px-3 py-1 rounded-full text-[10px] font-bold text-white shadow-lg"
-                            >
-                                Mode Manual
-                            </div>
-                        </div>
-
-                        <div
-                            class="mt-4 bg-rose-50 dark:bg-rose-900/20 p-2 px-4 rounded-xl border border-rose-100 dark:border-rose-800 text-center w-full"
-                        >
+                        <div class="min-w-0">
                             <p
-                                class="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center justify-center gap-1"
+                                class="text-[10px] font-extrabold tracking-widest uppercase text-slate-400"
                             >
-                                <AlertCircle :size="12" />
-                                {{ qrisState.errorMessage }}
+                                Total
+                            </p>
+                            <p
+                                class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mt-1 truncate"
+                            >
+                                {{ formatRupiah(totalPrice) }}
                             </p>
                         </div>
 
                         <button
-                            @click="handleRetry"
-                            class="mt-2 text-[10px] text-indigo-500 hover:underline flex items-center gap-1"
+                            class="shrink-0 w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 flex items-center justify-center text-indigo-600 dark:text-indigo-300 shadow-sm"
+                            @click="
+                                copyToClipboard(totalPrice.toString(), 'total')
+                            "
+                            aria-label="Copy amount"
                         >
-                            <RefreshCw :size="10" /> Coba Lagi
+                            <Check
+                                v-if="copiedTotal"
+                                :size="18"
+                                class="text-emerald-500"
+                            />
+                            <Copy v-else :size="18" />
                         </button>
+                    </div>
+
+                    <div
+                        class="mt-2 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-300"
+                    >
+                        <Info :size="14" class="text-slate-400 shrink-0" />
+                        <span class="truncate"
+                            >Nominal QR otomatis mengikuti total.</span
+                        >
                     </div>
                 </div>
 
-                <!-- TAB MANUAL -->
-                <div
-                    v-else
-                    class="space-y-4 animate-in slide-in-from-left-4 duration-300"
-                >
+                <!-- QRIS -->
+                <div v-if="activeTab === 'qris'" class="mt-4 space-y-3">
+                    <!-- Loading -->
                     <div
-                        class="p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/30"
+                        v-if="qrisState.isLoading"
+                        class="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4"
                     >
-                        <div class="flex justify-between items-start mb-2">
-                            <div>
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div
+                                class="w-11 h-11 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center shrink-0"
+                            >
+                                <Loader2
+                                    :size="20"
+                                    class="text-indigo-600 dark:text-indigo-300 animate-spin"
+                                />
+                            </div>
+                            <div class="min-w-0">
                                 <p
-                                    class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-0.5"
+                                    class="text-sm font-black text-slate-900 dark:text-white"
                                 >
-                                    {{ rekening.bank }}
+                                    Membuat QRIS
                                 </p>
                                 <p
-                                    class="text-xl font-mono font-black text-slate-800 dark:text-white tracking-wide"
+                                    class="text-xs text-slate-500 dark:text-slate-300 mt-0.5 truncate"
                                 >
-                                    {{ rekening.number }}
-                                </p>
-                                <p
-                                    class="text-[10px] text-slate-400 uppercase mt-0.5"
-                                >
-                                    {{ rekening.name }}
+                                    {{ loadingStage }}
                                 </p>
                             </div>
                         </div>
 
-                        <button
-                            @click="copyToClipboard(rekening.number, 'number')"
-                            class="w-full py-2 bg-white dark:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-500 transition flex items-center justify-center gap-2"
+                        <!-- ✅ skeleton QR lebih kecil di mobile -->
+                        <div
+                            class="mt-4 w-full rounded-3xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 relative overflow-hidden"
+                            style="aspect-ratio: 1 / 1"
                         >
-                            <Check
-                                v-if="copiedNumber"
-                                :size="14"
-                                class="text-emerald-500"
+                            <div class="absolute inset-0 shimmer"></div>
+                            <div
+                                class="absolute inset-0 flex items-center justify-center"
+                            >
+                                <p
+                                    class="text-[11px] font-bold text-slate-400 dark:text-slate-400"
+                                >
+                                    QR siap sebentar lagi…
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Success -->
+                    <div
+                        v-else-if="!qrisState.error && qrisState.data"
+                        class="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4"
+                    >
+                        <div
+                            class="flex items-start justify-between gap-3 min-w-0"
+                        >
+                            <div class="min-w-0">
+                                <p
+                                    class="text-sm font-black text-slate-900 dark:text-white"
+                                >
+                                    Scan QRIS
+                                </p>
+                                <p
+                                    class="text-xs text-slate-500 dark:text-slate-300 mt-1 truncate"
+                                >
+                                    Scan pakai e-wallet / m-banking.
+                                </p>
+                            </div>
+
+                            <button
+                                @click="handleRetry"
+                                class="shrink-0 px-3 py-2 rounded-2xl text-xs font-black border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition flex items-center gap-2"
+                            >
+                                <RefreshCw :size="14" class="shrink-0" />
+                                <span class="whitespace-nowrap">Refresh</span>
+                            </button>
+                        </div>
+
+                        <!-- ✅ QR lebih kecil di mobile -->
+                        <div
+                            class="mt-4 bg-white rounded-3xl border border-slate-200 dark:border-white/10 p-3 flex items-center justify-center"
+                        >
+                            <img
+                                :src="qrisState.data"
+                                alt="QRIS Dynamic"
+                                class="w-44 h-44 sm:w-56 sm:h-56 object-contain rounded-2xl"
                             />
-                            <span v-else>Salin Nomor</span>
-                            <Copy v-if="!copiedNumber" :size="14" />
+                        </div>
+
+                        <!-- ✅ Steps dipadatkan -->
+                        <div
+                            class="mt-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2"
+                        >
+                            <p
+                                class="text-[11px] font-bold text-slate-600 dark:text-slate-200"
+                            >
+                                Scan → Bayar → Konfirmasi
+                            </p>
+                            <p
+                                class="text-[11px] text-slate-500 dark:text-slate-300"
+                            >
+                                Setelah bayar, klik tombol “Saya Sudah Bayar”.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Error -->
+                    <div
+                        v-else
+                        class="rounded-3xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/70 dark:bg-rose-500/5 p-4"
+                    >
+                        <div class="flex items-start gap-3 min-w-0">
+                            <div
+                                class="w-11 h-11 rounded-2xl bg-white dark:bg-white/10 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center shrink-0"
+                            >
+                                <AlertCircle
+                                    :size="20"
+                                    class="text-rose-600 dark:text-rose-300"
+                                />
+                            </div>
+                            <div class="min-w-0">
+                                <p
+                                    class="text-sm font-black text-slate-900 dark:text-white"
+                                >
+                                    QR Otomatis Tidak Tersedia
+                                </p>
+                                <p
+                                    class="text-xs text-slate-600 dark:text-slate-300 mt-1"
+                                >
+                                    {{ qrisState.errorMessage }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            class="mt-4 bg-white rounded-3xl border border-slate-200 dark:border-white/10 p-3 flex items-center justify-center"
+                        >
+                            <img
+                                :src="qrisStaticImage"
+                                alt="QRIS Static"
+                                class="w-44 h-44 sm:w-56 sm:h-56 object-contain rounded-2xl opacity-90"
+                            />
+                        </div>
+
+                        <button
+                            @click="handleRetry"
+                            class="mt-4 w-full py-3 rounded-2xl bg-white dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 font-black text-sm hover:bg-slate-50 dark:hover:bg-white/20 transition flex items-center justify-center gap-2"
+                        >
+                            <RefreshCw :size="16" />
+                            Coba Lagi
                         </button>
+                    </div>
+                </div>
+
+                <!-- Manual -->
+                <div v-else class="mt-4 space-y-3">
+                    <div
+                        class="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4"
+                    >
+                        <p
+                            class="text-sm font-black text-slate-900 dark:text-white"
+                        >
+                            Transfer Manual
+                        </p>
+                        <p
+                            class="text-xs text-slate-500 dark:text-slate-300 mt-1"
+                        >
+                            Salin nomor tujuan lalu transfer sesuai total.
+                        </p>
+
+                        <div
+                            class="mt-4 rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4"
+                        >
+                            <p
+                                class="text-xs font-bold text-slate-500 dark:text-slate-300"
+                            >
+                                {{ rekening.bank }}
+                            </p>
+                            <p
+                                class="mt-1 text-xl sm:text-2xl font-black font-mono text-slate-900 dark:text-white tracking-wide break-all"
+                            >
+                                {{ rekening.number }}
+                            </p>
+                            <p
+                                class="text-[11px] text-slate-400 mt-1 uppercase"
+                            >
+                                {{ rekening.name }}
+                            </p>
+
+                            <button
+                                @click="
+                                    copyToClipboard(rekening.number, 'number')
+                                "
+                                class="mt-4 w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-sm transition flex items-center justify-center gap-2"
+                            >
+                                <Check
+                                    v-if="copiedNumber"
+                                    :size="18"
+                                    class="text-white"
+                                />
+                                <span class="whitespace-nowrap">
+                                    {{
+                                        copiedNumber
+                                            ? "Tersalin"
+                                            : "Salin Nomor"
+                                    }}
+                                </span>
+                                <Copy v-if="!copiedNumber" :size="18" />
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Footer (sticky) -->
             <div
-                class="p-6 pt-2 shrink-0 bg-white dark:bg-slate-900 z-10 border-t border-slate-50 dark:border-slate-800/50"
+                class="px-4 sm:px-6 py-4 border-t border-slate-100 dark:border-white/10 bg-white dark:bg-slate-950"
             >
                 <button
                     @click="openWhatsApp"
-                    class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-200 dark:shadow-none transition-all active:scale-[0.98] flex items-center justify-center gap-2 btn-bouncy"
+                    class="w-full py-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white font-black shadow-lg shadow-emerald-200/60 dark:shadow-none transition active:scale-[0.99] flex items-center justify-center gap-2"
                 >
-                    <MessageCircle :size="20" />
-                    Saya Sudah Bayar
+                    <MessageCircle :size="20" class="shrink-0" />
+                    <span class="whitespace-nowrap">Saya Sudah Bayar</span>
                 </button>
+
                 <button
                     @click="$emit('close')"
-                    class="w-full text-xs font-bold text-slate-400 hover:text-slate-600 py-3 mt-1"
+                    class="w-full text-xs font-black text-slate-400 hover:text-slate-600 py-3 mt-1"
                 >
                     Bayar Nanti
                 </button>
@@ -478,15 +648,24 @@ const handleRetry = () => {
 :global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #475569;
 }
-.animate-spin-slow {
-    animation: spin 3s linear infinite;
+
+/* shimmer skeleton */
+.shimmer {
+    background: linear-gradient(
+        90deg,
+        rgba(148, 163, 184, 0) 0%,
+        rgba(148, 163, 184, 0.18) 50%,
+        rgba(148, 163, 184, 0) 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 1.2s infinite;
 }
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
     }
-    to {
-        transform: rotate(360deg);
+    100% {
+        transform: translateX(100%);
     }
 }
 </style>
