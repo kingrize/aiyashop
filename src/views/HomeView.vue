@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed, nextTick, reactive } from "vue";
+import { ref, computed, nextTick, reactive, onMounted } from "vue";
 import { products } from "../data/products";
 import { useUserStore } from "../stores/user";
 import ProductCard from "../components/ProductCard.vue";
+import ProductSkeleton from "../components/ProductSkeleton.vue"; // IMPORT SKELETON
 import MemberCard from "../components/MemberCard.vue";
 import ProductActionModal from "../components/ProductActionModal.vue";
 import TransactionHistoryModal from "../components/TransactionHistoryModal.vue";
@@ -47,12 +48,22 @@ const isEditingName = ref(false);
 const newNameInput = ref("");
 const nameInputRef = ref(null);
 
+// LOADING STATE
+const isLoading = ref(true);
+
 // IOS ALERT STATE
 const alertState = reactive({
     isOpen: false,
     title: "",
     message: "",
     onConfirm: null,
+});
+
+// SIMULASI LOADING SAAT MOUNTED
+onMounted(() => {
+    setTimeout(() => {
+        isLoading.value = false;
+    }, 1500); // Loading 1.5 detik
 });
 
 const timeGreeting = computed(() => {
@@ -322,21 +333,6 @@ const faqs = [
                                         >Keluar</span
                                     >
                                 </button>
-                                <button
-                                    v-if="false"
-                                    @click="router.push('/member/settings')"
-                                    class="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl hover:bg-white dark:hover:bg-slate-700/50 transition duration-300 group active:scale-95"
-                                >
-                                    <div
-                                        class="p-1.5 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-500 group-hover:text-slate-700 transition"
-                                    >
-                                        <Settings :size="18" />
-                                    </div>
-                                    <span
-                                        class="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200"
-                                        >Akun</span
-                                    >
-                                </button>
                             </div>
                         </div>
                     </div>
@@ -477,12 +473,18 @@ const faqs = [
                 <div
                     class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8 mb-12"
                 >
-                    <ProductCard
-                        v-for="product in filteredProducts"
-                        :key="product.id"
-                        :product="product"
-                        @open-detail="openProductDetail"
-                    />
+                    <template v-if="isLoading">
+                        <ProductSkeleton v-for="n in 6" :key="n" />
+                    </template>
+
+                    <template v-else>
+                        <ProductCard
+                            v-for="product in filteredProducts"
+                            :key="product.id"
+                            :product="product"
+                            @open-detail="openProductDetail"
+                        />
+                    </template>
                 </div>
             </div>
         </section>

@@ -1,16 +1,13 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import {
-    Heart,
     Minus,
     Plus,
-    Users,
-    Clock,
     Zap,
     Gift,
-    CheckCircle2,
+    ShoppingBag,
+    ShieldCheck,
     Info,
-    AlertTriangle,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -37,7 +34,8 @@ const minSlots = computed(() => config.value.minSlots ?? 1);
 const maxSlots = computed(() => config.value.maxSlots ?? 20);
 const slots = ref(5);
 
-const pricePerHeart = computed(() => config.value.pricePerHeart ?? 150); // Default 150
+// Harga per Heart (Default 100)
+const pricePerHeart = computed(() => config.value.pricePerHeart ?? 100);
 
 const formatCurrency = (value) =>
     new Intl.NumberFormat("id-ID", {
@@ -125,206 +123,175 @@ const handleAddToCart = () => {
 </script>
 
 <template>
-    <div class="flex flex-col h-full gap-6 pb-1">
-        <div class="space-y-4">
-            <div class="flex justify-between items-end">
-                <label
-                    class="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wide"
+    <div class="flex flex-col h-full relative">
+        <div
+            class="flex-1 flex flex-col justify-center items-center py-2 space-y-6"
+        >
+            <div class="text-center space-y-2">
+                <h3
+                    class="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]"
                 >
-                    Mau beli berapa?
-                </label>
+                    Jumlah Heart
+                </h3>
                 <transition name="scale">
-                    <span
+                    <div
                         v-if="bonusHearts > 0"
-                        class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 dark:bg-emerald-500/20 dark:text-emerald-300 px-2.5 py-1 rounded-full animate-pulse border border-emerald-200 dark:border-emerald-800"
+                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-100 dark:border-emerald-500/20"
                     >
-                        <Gift :size="12" /> +{{ bonusHearts }} Bonus
-                    </span>
+                        <Gift :size="10" /> +{{ bonusHearts }} Bonus
+                    </div>
                 </transition>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-6 md:gap-8">
                 <button
                     @click="decreaseHearts"
-                    class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-rose-400 hover:text-rose-500 dark:hover:border-rose-500 transition active:scale-95 shadow-sm"
+                    class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:text-rose-400 transition-all active:scale-90"
                 >
-                    <Minus :size="24" />
+                    <Minus :size="20" />
                 </button>
-                <div class="flex-1 relative group">
+
+                <div class="relative group text-center">
                     <input
                         type="number"
                         :value="heartCount"
                         @input="handleInput"
                         @blur="handleBlur"
-                        class="w-full h-14 text-center font-black text-3xl text-indigo-600 dark:text-indigo-400 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-600 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition"
+                        class="no-arrow w-32 text-center text-5xl md:text-6xl font-black bg-transparent text-slate-800 dark:text-white focus:outline-none p-0 border-none transition-colors placeholder-slate-200"
+                        placeholder="0"
                     />
                     <div
-                        class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 group-focus-within:opacity-100 transition-opacity"
+                        class="text-[10px] font-medium text-slate-400 mt-1 flex justify-center gap-1"
                     >
-                        <Heart
-                            :size="20"
-                            class="text-indigo-500 fill-indigo-500/20"
-                        />
+                        <span>Min: {{ minHearts }}</span>
+                        <span class="text-slate-300">•</span>
+                        <span>Max: {{ maxHearts }}</span>
                     </div>
                 </div>
+
                 <button
                     @click="increaseHearts"
-                    class="w-14 h-14 flex items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-emerald-400 hover:text-emerald-500 dark:hover:border-emerald-500 transition active:scale-95 shadow-sm"
+                    class="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center bg-slate-50 dark:bg-slate-800 text-slate-400 hover:bg-indigo-50 hover:text-indigo-500 dark:hover:text-indigo-400 transition-all active:scale-90"
                 >
-                    <Plus :size="24" />
+                    <Plus :size="20" />
                 </button>
             </div>
 
-            <p
-                class="text-xs text-center font-medium text-slate-500 dark:text-slate-400"
-            >
-                Minimal Order:
-                <span class="text-slate-800 dark:text-slate-200 font-bold">{{
-                    minHearts
-                }}</span>
-                • Max: {{ maxHearts }}
-            </p>
-        </div>
-
-        <div
-            v-if="!isInstant"
-            class="space-y-4 pt-4 border-t border-dashed border-slate-200 dark:border-slate-700"
-        >
-            <div class="flex justify-between items-center">
-                <label
-                    class="text-sm font-bold text-slate-700 dark:text-slate-200 tracking-wide flex items-center gap-2"
-                >
-                    <Users :size="16" class="text-indigo-500" /> Mau add berapa
-                    bot?
-                </label>
-                <span
-                    class="text-sm font-bold text-white bg-indigo-500 px-3 py-1 rounded-lg shadow-sm"
-                >
-                    {{ slots }} Akun
-                </span>
-            </div>
-
-            <input
-                type="range"
-                v-model.number="slots"
-                :min="minSlots"
-                :max="maxSlots"
-                class="w-full h-3 bg-slate-300 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500 hover:accent-indigo-400 transition-all border border-slate-200 dark:border-slate-600"
-            />
-
-            <div
-                class="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800 flex gap-3 items-start"
-            >
-                <AlertTriangle
-                    :size="18"
-                    class="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"
-                />
-                <div class="space-y-1">
-                    <p
-                        class="text-xs font-bold text-amber-800 dark:text-amber-300"
+            <div v-if="!isInstant" class="w-full max-w-[85%] space-y-4 pt-2">
+                <div class="flex justify-between items-end px-1">
+                    <span
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
                     >
-                        Info Perubahan Harga (150/heart)
-                    </p>
-                    <p
-                        class="text-[11px] text-amber-700 dark:text-amber-400/80 leading-relaxed"
+                        Kecepatan ({{ slots }} Bot)
+                    </span>
+                    <span
+                        class="text-xs font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md"
                     >
-                        TGC mengubah kebijakan:
-                        <b>Akun Guest tidak bisa lagi kirim heart</b> (Wajib
-                        linked Gmail/Nintendo). <br />Hal ini membuat proses
-                        pembuatan akun bot jauh lebih sulit & mahal. Terima
-                        kasih pengertiannya 🙏
-                    </p>
+                        {{ estimatedDays }} Hari
+                    </span>
                 </div>
-            </div>
 
-            <div
-                class="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800 flex gap-3 items-start"
-            >
-                <Info
-                    :size="18"
-                    class="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0"
-                />
-                <p
-                    class="text-xs text-blue-800 dark:text-blue-200 leading-relaxed font-medium"
-                >
-                    1 Akun Bot = 1 Heart/Hari (Limit Game).<br />
-                    Dengan add <b>{{ slots }} bot</b>, pesanan kamu selesai
-                    dalam estimasi <b>{{ estimatedDays }} hari</b>.
-                </p>
-            </div>
-        </div>
-
-        <div
-            v-else
-            class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-800 flex items-start gap-3"
-        >
-            <Zap
-                :size="24"
-                class="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"
-            />
-            <div>
-                <p class="text-sm font-bold text-amber-800 dark:text-amber-300">
-                    Mode Kilat Aktif ⚡
-                </p>
-                <p
-                    class="text-xs text-amber-700 dark:text-amber-400 leading-relaxed mt-1 font-medium"
-                >
-                    Heart dikirim manual hari ini juga via Trade. Tidak perlu
-                    add bot. Pastikan kamu online ya!
-                </p>
-            </div>
-        </div>
-
-        <div
-            class="mt-auto bg-slate-50 dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700"
-        >
-            <div class="flex justify-between items-end mb-4">
-                <div>
-                    <p
-                        class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1"
-                    >
-                        Total Bayar
-                    </p>
-                    <p
-                        class="text-3xl font-black text-slate-800 dark:text-white tracking-tight"
-                    >
-                        {{ formatCurrency(totalPrice) }}
-                    </p>
-                </div>
-                <div class="text-right">
+                <div class="relative w-full h-6 flex items-center">
+                    <input
+                        type="range"
+                        v-model.number="slots"
+                        :min="minSlots"
+                        :max="maxSlots"
+                        class="custom-slider w-full absolute z-20 opacity-0 cursor-pointer h-full"
+                    />
                     <div
-                        class="inline-flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-sm"
+                        class="absolute w-full h-2 bg-slate-100 dark:bg-slate-700/50 rounded-full overflow-hidden"
                     >
-                        <Clock :size="14" class="text-rose-500" />
-                        <span
-                            v-if="!isInstant"
-                            class="text-sm font-bold text-slate-700 dark:text-slate-200"
-                            >{{ estimatedDays }} Hari</span
-                        >
-                        <span
-                            v-else
-                            class="text-sm font-bold text-slate-700 dark:text-slate-200"
-                            >Hari Ini</span
-                        >
+                        <div
+                            class="h-full bg-indigo-200 dark:bg-indigo-500/30 transition-all duration-100 ease-out"
+                            :style="{
+                                width: `${((slots - minSlots) / (maxSlots - minSlots)) * 100}%`,
+                            }"
+                        ></div>
+                    </div>
+                    <div
+                        class="absolute h-5 w-5 bg-indigo-500 rounded-full border-[3px] border-white dark:border-slate-800 shadow-md transition-all duration-100 ease-out pointer-events-none z-10"
+                        :style="{
+                            left: `calc(${((slots - minSlots) / (maxSlots - minSlots)) * 100}% - 10px)`,
+                        }"
+                    ></div>
+                </div>
+
+                <p
+                    class="text-[10px] text-center text-slate-400 dark:text-slate-500 leading-relaxed"
+                >
+                    <Info
+                        :size="10"
+                        class="inline mb-0.5 text-slate-300 dark:text-slate-600"
+                    />
+                    Wajib akun Linked (Gmail/Nintendo/PS).
+                </p>
+            </div>
+
+            <div
+                v-else
+                class="flex flex-col items-center gap-1 text-amber-500/80"
+            >
+                <Zap :size="20" class="fill-amber-100 dark:fill-amber-900/20" />
+                <span class="text-[10px] font-bold uppercase tracking-widest"
+                    >Mode Kilat Aktif</span
+                >
+            </div>
+        </div>
+
+        <div
+            class="mt-auto pt-5 border-t border-slate-50 dark:border-slate-800/50"
+        >
+            <div class="flex items-center justify-between mb-4 px-1">
+                <div class="flex flex-col">
+                    <span
+                        class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+                        >Total Tagihan</span
+                    >
+                    <span
+                        class="text-2xl font-black text-slate-800 dark:text-slate-100"
+                        >{{ formatCurrency(totalPrice) }}</span
+                    >
+                </div>
+                <div class="text-right flex flex-col items-end gap-1">
+                    <div
+                        v-if="!isInstant"
+                        class="flex items-center gap-1 text-[10px] font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-2 py-1 rounded-md"
+                    >
+                        <ShieldCheck :size="10" /> Aman 100%
                     </div>
                 </div>
             </div>
 
             <button
                 @click="handleAddToCart"
-                class="w-full py-4 rounded-xl bg-indigo-600 text-white text-sm font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 transition-all flex items-center justify-center gap-2"
+                class="group w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-[0.98] transition-all flex items-center justify-center gap-2"
             >
-                <CheckCircle2 :size="18" class="text-white/80" />
-                Konfirmasi Pesanan
+                <ShoppingBag
+                    :size="18"
+                    class="group-hover:-translate-y-0.5 transition-transform"
+                />
+                Masuk Keranjang
             </button>
         </div>
     </div>
 </template>
 
 <style scoped>
+/* HILANGKAN PANAH INPUT ANGKA */
+.no-arrow::-webkit-outer-spin-button,
+.no-arrow::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.no-arrow {
+    -moz-appearance: textfield;
+}
+
+/* ANIMASI HALUS */
 .scale-enter-active,
 .scale-leave-active {
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .scale-enter-from,
 .scale-leave-to {

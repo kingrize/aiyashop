@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from "vue";
-import { useCartStore } from "../stores/cart"; // 1. Restore Cart Store
+import { computed, ref } from "vue";
+import { useCartStore } from "../stores/cart";
 import {
     Sparkles,
     Moon,
@@ -12,7 +12,6 @@ import {
     Zap,
     ChevronRight,
     Plus,
-    ShoppingBag,
 } from "lucide-vue-next";
 
 const props = defineProps({
@@ -20,7 +19,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["open-detail"]);
-const cart = useCartStore(); // 2. Init Cart
+const cart = useCartStore();
+
+// --- STATE LOVE (MICRO-INTERACTION) ---
+const isLiked = ref(false);
+const toggleLike = (e) => {
+    e.stopPropagation(); // Mencegah card ikut terklik
+    isLiked.value = !isLiked.value;
+};
 
 const iconComponent = computed(() => {
     const map = {
@@ -35,7 +41,6 @@ const iconComponent = computed(() => {
     return map[props.product.iconType?.toLowerCase()] || Sparkles;
 });
 
-// 3. Logic Cek Apakah Produk Kompleks (Butuh Modal) atau Simpel
 const isComplex = computed(() => {
     return (
         props.product.isCalculator === true ||
@@ -79,13 +84,10 @@ const formatCurrency = (val) =>
         maximumFractionDigits: 0,
     }).format(val || 0);
 
-// 4. Handler Pintar
 const handleButtonClick = () => {
     if (isComplex.value) {
-        // Jika butuh opsi (Calculator/Varian), buka Modal
         emit("open-detail", props.product);
     } else {
-        // Jika simpel, langsung masuk keranjang!
         cart.addToCart(props.product);
     }
 };
@@ -113,17 +115,21 @@ const handleButtonClick = () => {
                         stroke-width="2.5"
                     />
                 </div>
-                <div
-                    v-if="product.tag"
-                    class="px-2 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-sm"
+
+                <button
+                    @click="toggleLike"
+                    class="w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 hover:bg-white/50 dark:hover:bg-white/10"
+                    :class="
+                        isLiked
+                            ? 'text-rose-500'
+                            : 'text-slate-300 dark:text-slate-600'
+                    "
                 >
-                    <span
-                        class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400 flex items-center gap-1"
-                    >
-                        <Star :size="8" class="text-amber-400 fill-amber-400" />
-                        {{ product.tag }}
-                    </span>
-                </div>
+                    <Heart
+                        :size="20"
+                        :class="{ 'fill-rose-500 animate-pop': isLiked }"
+                    />
+                </button>
             </div>
 
             <div class="mb-2">
@@ -181,3 +187,20 @@ const handleButtonClick = () => {
         </div>
     </article>
 </template>
+
+<style scoped>
+@keyframes pop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.4);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+.animate-pop {
+    animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+</style>

@@ -3,6 +3,7 @@ import { ref, computed, watch, reactive } from "vue";
 import { useCartStore } from "../stores/cart";
 import { usePromoStore } from "../stores/promo";
 import { useUserStore } from "../stores/user";
+import ManualPaymentModal from "./ManualPaymentModal.vue";
 import {
     ShoppingBag,
     X,
@@ -54,7 +55,10 @@ const showSuccessModal = ref(false);
 const isProcessingPayment = ref(false);
 const countdown = ref(3);
 
-// HAPUS IS_REGISTER_MODE, HANYA ADA LOGIN
+// --- STATE MANUAL PAYMENT ---
+const showManualPayment = ref(false);
+const manualPaymentData = ref({ total: 0, id: "" });
+
 const authForm = reactive({ username: "", password: "" });
 const isAuthLoading = ref(false);
 
@@ -121,7 +125,6 @@ const handleApplyPromo = async () => {
     setTimeout(() => (promoMessage.value = ""), 3000);
 };
 
-// LOGIN ONLY
 const handleAuthSubmit = async () => {
     isAuthLoading.value = true;
     try {
@@ -149,7 +152,16 @@ const handleCheckoutClick = () => {
         }
         showConfirmModal.value = true;
     } else {
-        processCheckout("Menunggu Pembayaran (QRIS)");
+        // --- LOGIC BARU: MANUAL PAYMENT (QRIS) ---
+        const uniqueCode = Math.floor(Math.random() * 500) + 1;
+        const totalWithCode = finalTotalComputed.value + uniqueCode;
+        const orderId = `ORD-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 100)}`;
+
+        manualPaymentData.value = {
+            total: totalWithCode,
+            id: orderId,
+        };
+        showManualPayment.value = true;
     }
 };
 
@@ -220,22 +232,6 @@ const processCheckout = (statusBayar) => {
         message += "✅ *Pembayaran LUNAS via Saldo Member*%0A";
         message +=
             "Mohon segera diproses ya min! Detail pesanan sudah masuk di sistem.";
-    } else {
-        store.items.forEach((item, index) => {
-            message += `${index + 1}. ${item.name} (${item.qty}x) - ${formatRupiah(item.price * item.qty)}%0A`;
-            if (item.desc) message += `   _${item.desc}_\n`;
-        });
-
-        if (promoStore.activeCode && isPromoEligible.value) {
-            message += `%0A🎟️ Kode Promo: ${promoStore.activeCode}`;
-            message += `%0ADiskon: -${formatRupiah(promoStore.savings(store.totalPrice))}`;
-        }
-
-        const final =
-            promoStore.activeCode && isPromoEligible.value
-                ? promoStore.calculateTotal(store.totalPrice)
-                : store.totalPrice;
-        message += `%0A%0ATotal: *${formatRupiah(final)}*`;
     }
 
     if (userStore.user) {
@@ -441,18 +437,6 @@ const processCheckout = (statusBayar) => {
                             <Sparkles v-if="!promoStore.error" :size="12" />
                             {{ promoMessage }}
                         </p>
-                        <div
-                            v-if="promoStore.activeCode && !isPromoEligible"
-                            class="mt-2 flex items-start gap-2 bg-amber-50 dark:bg-amber-900/20 p-2 rounded-lg border border-amber-100 dark:border-amber-800 text-[10px] text-amber-600 dark:text-amber-400"
-                        >
-                            <Info :size="14" class="mt-0.5 shrink-0" /><span
-                                >Kupon aktif, tapi minimal belanja
-                                <b>{{ formatRupiah(MIN_ORDER_FOR_PROMO) }}</b
-                                >.<br />Tambah
-                                <b>{{ formatRupiah(amountNeededForPromo) }}</b>
-                                lagi ya!</span
-                            >
-                        </div>
                     </div>
 
                     <div class="px-6 py-2">
@@ -655,8 +639,8 @@ const processCheckout = (statusBayar) => {
                                 ><Wallet :size="20" /> Gunakan Saldo</span
                             >
                             <span v-else class="flex items-center gap-2"
-                                ><MessageCircle :size="20" /> Checkout via
-                                WhatsApp</span
+                                ><MessageCircle :size="20" /> Checkout
+                                Sekarang</span
                             >
                         </button>
                     </div>
@@ -810,6 +794,15 @@ const processCheckout = (statusBayar) => {
                 </div>
             </div>
         </transition>
+
+        <Teleport to="body">
+            <ManualPaymentModal
+                :is-open="showManualPayment"
+                :total-price="manualPaymentData.total"
+                :order-id="manualPaymentData.id"
+                @close="showManualPayment = false"
+            />
+        </Teleport>
     </div>
 </template>
 

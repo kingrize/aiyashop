@@ -1,3 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+# Proxy endpoint (frontend hit /api/generate-qris?...)
+[[redirects]]
+  from = "/api/generate-qris"
+  to = "/.netlify/functions/qris"
+  status = 200
+  force = true
+
+# SPA fallback (harus di bawah)
 [[redirects]]
   from = "/*"
   to = "/index.html"

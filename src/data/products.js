@@ -5,14 +5,14 @@ export const products = [
     id: "daily-heart",
     name: "Daily Heart (Via Bot)",
     category: "heart",
-    price: 150, // HARGA NAIK JADI 150
+    price: 100, // SUDAH DI-UPDATE JADI 100
     discountPrice: 0,
     iconType: "heart",
     tag: "Best Seller",
     desc: "Dikirim bertahap 1 heart/hari via Bot. Wajib add akun bot. Bonus +5 heart tiap beli 50.",
     isCalculator: true,
     config: {
-      pricePerHeart: 150, // Update Config
+      pricePerHeart: 100, // Config disesuaikan jadi 100
       minHearts: 10,
       maxHearts: 1000,
       defaultHearts: 50,
@@ -44,7 +44,7 @@ export const products = [
 
   // --- NEW PRODUCTS ---
 
-  // 1. JOKI TRIALS (Update Harga)
+  // 1. JOKI TRIALS
   {
     id: "trial-elements",
     name: "Joki Trial of Elements",
@@ -56,20 +56,20 @@ export const products = [
     desc: "Joki melewati rintangan Trial. Pilih elemen yang kamu butuhkan atau ambil paket lengkap.",
     eta: "30-60 Menit",
     variants: [
-      { id: "t-water", name: "Trial Water 💧", price: 1500 }, // Update 1500
-      { id: "t-earth", name: "Trial Earth 🌿", price: 2000 }, // Update 2000
-      { id: "t-air", name: "Trial Air 💨", price: 3000 }, // Update 3000
-      { id: "t-fire", name: "Trial Fire 🔥", price: 3500 }, // Update 3500
+      { id: "t-water", name: "Trial Water 💧", price: 1500 },
+      { id: "t-earth", name: "Trial Earth 🌿", price: 2000 },
+      { id: "t-air", name: "Trial Air 💨", price: 3000 },
+      { id: "t-fire", name: "Trial Fire 🔥", price: 3500 },
       {
         id: "t-bundle",
-        name: "Bundle All Trials (Lengkap) ✨",
+        name: "Bundle All Trials (Lengkap) 🌟",
         price: 8000,
         isBundle: true,
-      }, // Total 10k -> Bundle 8k (Opsional, sesuaikan jika mau diskon bundle)
+      },
     ],
   },
 
-  // 2. JOKI CANDLE RUN (Update Opsi)
+  // 2. JOKI CANDLE RUN
   {
     id: "cr-daily-quest",
     name: "Daily CR + Quest",
@@ -82,7 +82,7 @@ export const products = [
     eta: "1-2 Jam",
     singleSelection: true,
     variants: [
-      { id: "dq-only", name: "Daily Quest Only 📜", price: 3000 }, // Opsi Baru
+      { id: "dq-only", name: "Daily Quest Only 📜", price: 3000 },
       { id: "cr-15", name: "15 Candle + Daily Quest", price: 5000 },
       { id: "cr-20", name: "20 Candle + Daily Quest", price: 7000 },
     ],
