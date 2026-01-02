@@ -1,13 +1,11 @@
-// LOKASI FILE: src/stores/theme.js
 import { defineStore } from "pinia";
 
 export const useThemeStore = defineStore("theme", {
   state: () => ({
-    // Cek local storage atau preferensi sistem
-    isDark:
-      localStorage.getItem("theme") === "dark" ||
-      (!localStorage.getItem("theme") &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches),
+    // UBAH BAGIAN INI:
+    // Logika baru: Hanya true jika user PERNAH menyimpan 'dark'.
+    // Jika pengguna baru (null) atau 'light', maka hasilnya false (Light Mode).
+    isDark: localStorage.getItem("theme") === "dark",
   }),
   actions: {
     toggleTheme() {
