@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, nextTick, reactive, onMounted } from "vue";
-import { products } from "../data/products";
+import { products as defaultProducts } from "../data/products";
+import { useProductsStore } from "../stores/products";
 import { useUserStore } from "../stores/user";
 import ProductCard from "../components/ProductCard.vue";
 import ProductSkeleton from "../components/ProductSkeleton.vue"; // IMPORT SKELETON
@@ -38,6 +39,7 @@ import skykidMoth from "../assets/moth.gif";
 
 const router = useRouter();
 const userStore = useUserStore();
+const productsStore = useProductsStore();
 const activeCategory = ref("all");
 const selectedProduct = ref(null);
 const showProductModal = ref(false);
@@ -59,13 +61,17 @@ const alertState = reactive({
     onConfirm: null,
 });
 
-// SIMULASI LOADING SAAT MOUNTED
-onMounted(() => {
+// LOAD PRODUCTS (Firestore) + minimum skeleton delay
+onMounted(async () => {
+    const start = Date.now();
+    await productsStore.fetchAll({ fallback: defaultProducts });
+    const elapsed = Date.now() - start;
+    const minDelay = 650; // biar transisi kerasa premium tapi ga kelamaan
+    const wait = Math.max(0, minDelay - elapsed);
     setTimeout(() => {
         isLoading.value = false;
-    }, 1500); // Loading 1.5 detik
+    }, wait);
 });
-
 const timeGreeting = computed(() => {
     const hour = new Date().getHours();
     if (hour < 11) return "Selamat Pagi";
@@ -75,10 +81,10 @@ const timeGreeting = computed(() => {
 });
 
 const filteredProducts = computed(() => {
-    if (activeCategory.value === "all") return products;
-    return products.filter((p) => p.category === activeCategory.value);
+    const list = productsStore.activeProducts;
+    if (activeCategory.value === "all") return list;
+    return list.filter((p) => p.category === activeCategory.value);
 });
-
 const scrollToServices = () => {
     document.getElementById("services").scrollIntoView({ behavior: "smooth" });
 };

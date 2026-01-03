@@ -3,6 +3,8 @@ import { onMounted, ref, computed, reactive } from "vue";
 import { useUserStore } from "../../stores/user";
 import { usePromoStore } from "../../stores/promo";
 import { useAnnouncementStore } from "../../stores/announcement";
+import { useProductsStore } from "../../stores/products";
+import { products as defaultProducts } from "../../data/products";
 import { useRouter } from "vue-router";
 import {
     LayoutGrid,
@@ -25,16 +27,186 @@ import {
     Megaphone,
     Crown,
     Shield,
+    Package,
+    Pencil,
+    Save,
+    RefreshCw,
 } from "lucide-vue-next";
 
 const userStore = useUserStore();
 const promoStore = usePromoStore();
 const announcementStore = useAnnouncementStore();
+const productsStore = useProductsStore();
 const router = useRouter();
 
 // UI State
 const activeTab = ref("dashboard");
 const searchQuery = ref("");
+
+// Products Admin State
+const showProductModal = ref(false);
+const isEditingProduct = ref(false);
+const productForm = reactive({
+    id: "",
+    name: "",
+    category: "special",
+    price: 0,
+    discountPrice: 0,
+    iconType: "sparkles",
+    tag: "",
+    desc: "",
+    eta: "",
+    isActive: true,
+    isCalculator: false,
+    singleSelection: false,
+    variants: [],
+    config: {},
+});
+const variantsJson = ref("[]");
+const configJson = ref("{}");
+const productFormError = ref("");
+
+function slugifyId(str) {
+    return String(str || "")
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .slice(0, 50);
+}
+
+function resetProductForm() {
+    productForm.id = "";
+    productForm.name = "";
+    productForm.category = "special";
+    productForm.price = 0;
+    productForm.discountPrice = 0;
+    productForm.iconType = "sparkles";
+    productForm.tag = "";
+    productForm.desc = "";
+    productForm.eta = "";
+    productForm.isActive = true;
+    productForm.isCalculator = false;
+    productForm.singleSelection = false;
+    productForm.variants = [];
+    productForm.config = {};
+    variantsJson.value = "[]";
+    configJson.value = "{}";
+    productFormError.value = "";
+}
+
+function openCreateProduct() {
+    resetProductForm();
+    isEditingProduct.value = false;
+    showProductModal.value = true;
+}
+
+function openEditProduct(p) {
+    resetProductForm();
+    isEditingProduct.value = true;
+    productForm.id = p.id;
+    productForm.name = p.name || "";
+    productForm.category = p.category || "special";
+    productForm.price = Number(p.price || 0);
+    productForm.discountPrice = Number(p.discountPrice || 0);
+    productForm.iconType = p.iconType || "sparkles";
+    productForm.tag = p.tag || "";
+    productForm.desc = p.desc || "";
+    productForm.eta = p.eta || "";
+    productForm.isActive = p.isActive !== false;
+    productForm.isCalculator = p.isCalculator === true;
+    productForm.singleSelection = p.singleSelection === true;
+    productForm.variants = Array.isArray(p.variants) ? p.variants : [];
+    productForm.config =
+        p.config && typeof p.config === "object" ? p.config : {};
+    variantsJson.value = JSON.stringify(productForm.variants, null, 2);
+    configJson.value = JSON.stringify(productForm.config, null, 2);
+    showProductModal.value = true;
+}
+
+function parseJsonOrThrow(text, fallback) {
+    if (!text || !String(text).trim()) return fallback;
+    return JSON.parse(text);
+}
+
+async function saveProduct() {
+    productFormError.value = "";
+    try {
+        if (!productForm.name.trim())
+            throw new Error("Nama produk wajib diisi.");
+        // Auto ID kalau kosong
+        if (!productForm.id) {
+            const base = slugifyId(productForm.name);
+            productForm.id = base || `product-${Date.now()}`;
+        } else {
+            productForm.id = slugifyId(productForm.id);
+        }
+
+        const variants = parseJsonOrThrow(variantsJson.value, []);
+        const config = parseJsonOrThrow(configJson.value, {});
+        if (!Array.isArray(variants))
+            throw new Error("Variants harus berupa array JSON.");
+        if (
+            config === null ||
+            typeof config !== "object" ||
+            Array.isArray(config)
+        )
+            throw new Error("Config harus berupa object JSON.");
+
+        const payload = {
+            id: productForm.id,
+            name: productForm.name.trim(),
+            category: productForm.category,
+            price: Number(productForm.price || 0),
+            discountPrice: Number(productForm.discountPrice || 0),
+            iconType: productForm.iconType || "sparkles",
+            tag: productForm.tag || "",
+            desc: productForm.desc || "",
+            eta: productForm.eta || "",
+            isActive: productForm.isActive !== false,
+            isCalculator: productForm.isCalculator === true,
+            singleSelection: productForm.singleSelection === true,
+            variants,
+            config,
+        };
+
+        const ok = await productsStore.upsert(payload);
+        if (!ok)
+            throw new Error(
+                "Gagal simpan produk. Cek koneksi / rules Firebase.",
+            );
+        showProductModal.value = false;
+    } catch (e) {
+        productFormError.value = e?.message || "Gagal simpan produk.";
+    }
+}
+
+const toggleProductActive = async (p) => {
+    await productsStore.toggleActive(p.id, p.isActive);
+};
+
+const deleteProduct = (p) => {
+    showConfirm(
+        "Hapus Produk?",
+        `Hapus: ${p.name}?`,
+        async () => {
+            await productsStore.remove(p.id);
+        },
+        true,
+    );
+};
+
+const seedProducts = () => {
+    showConfirm(
+        "Seed Produk?",
+        "Ini akan meng-copy products.js ke Firestore (overwrite per id yang sama).",
+        async () => {
+            await productsStore.seed(defaultProducts);
+            showAlert("Done", "Produk berhasil di-seed ke Firestore ✅");
+        },
+    );
+};
 
 // Modals State
 const showTopUpModal = ref(false);
@@ -104,6 +276,7 @@ onMounted(async () => {
     await userStore.fetchAllUsers();
     await promoStore.fetchAllPromos();
     await announcementStore.fetchAll();
+    await productsStore.fetchAll({ fallback: defaultProducts });
 });
 
 // Helpers
@@ -304,6 +477,18 @@ const deleteAnnouncement = (id) => {
                     >
                         <Tag :size="20" /> Promos
                     </button>
+
+                    <button
+                        @click="activeTab = 'products'"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
+                        :class="
+                            activeTab === 'products'
+                                ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white'
+                                : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5'
+                        "
+                    >
+                        <Package :size="20" /> Products
+                    </button>
                     <button
                         @click="activeTab = 'announce'"
                         class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
@@ -362,7 +547,9 @@ const deleteAnnouncement = (id) => {
                                   ? "User Management"
                                   : activeTab === "promos"
                                     ? "Promo Codes"
-                                    : "Global Announcements"
+                                    : activeTab === "products"
+                                      ? "Products"
+                                      : "Global Announcements"
                         }}
                     </h2>
                     <p class="text-slate-400 font-medium text-sm">
@@ -378,6 +565,27 @@ const deleteAnnouncement = (id) => {
                         <span class="hidden md:inline">Add Member</span>
                     </button>
                 </div>
+                <div
+                    v-else-if="activeTab === 'products'"
+                    class="flex items-center gap-2"
+                >
+                    <button
+                        @click="seedProducts"
+                        class="hidden md:flex items-center gap-2 px-4 py-2.5 bg-white/80 dark:bg-[#1C1C1E]/90 border border-slate-200/60 dark:border-white/10 rounded-xl font-bold shadow-sm transition hover:shadow-md"
+                        title="Seed products.js → Firestore"
+                    >
+                        <RefreshCw :size="18" />
+                        <span>Seed</span>
+                    </button>
+                    <button
+                        @click="openCreateProduct"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg transition btn-bouncy"
+                    >
+                        <Plus :size="18" />
+                        <span class="hidden md:inline">Add Product</span>
+                    </button>
+                </div>
+
                 <button
                     @click="handleLogout"
                     class="lg:hidden p-2 bg-white dark:bg-slate-800 rounded-full text-slate-400 hover:text-rose-500 shadow-sm"
@@ -845,6 +1053,392 @@ const deleteAnnouncement = (id) => {
             </div>
 
             <div
+                v-else-if="activeTab === 'products'"
+                class="animate-in fade-in slide-in-from-bottom-4"
+            >
+                <div
+                    class="bg-white dark:bg-[#1C1C1E] rounded-[2rem] shadow-sm border border-slate-100 dark:border-white/5 overflow-hidden"
+                >
+                    <div
+                        class="p-4 md:p-5 border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex flex-col md:flex-row md:items-center md:justify-between gap-3"
+                    >
+                        <div class="flex items-center gap-2">
+                            <Package :size="18" class="text-indigo-500" />
+                            <div>
+                                <h3
+                                    class="font-black text-slate-900 dark:text-white"
+                                >
+                                    Products
+                                </h3>
+                                <p class="text-xs text-slate-400">
+                                    Sumber: Firestore (fallback: products.js)
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div
+                                class="px-3 py-2 rounded-xl bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/10 text-xs font-bold text-slate-500 dark:text-slate-300"
+                            >
+                                Total: {{ productsStore.all.length }}
+                            </div>
+                            <button
+                                @click="
+                                    productsStore.fetchAll({
+                                        fallback: defaultProducts,
+                                    })
+                                "
+                                class="p-2.5 rounded-xl bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/10 hover:shadow-sm transition"
+                                title="Reload"
+                            >
+                                <RefreshCw :size="16" class="text-slate-400" />
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="p-4 md:p-5">
+                        <div
+                            v-if="productsStore.isLoading"
+                            class="py-10 text-center text-slate-400 font-medium"
+                        >
+                            Loading products...
+                        </div>
+
+                        <div
+                            v-else
+                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"
+                        >
+                            <div
+                                v-for="p in productsStore.all"
+                                :key="p.id"
+                                class="rounded-2xl border border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 p-4 flex flex-col"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <div class="min-w-0">
+                                        <p
+                                            class="text-[10px] uppercase tracking-widest font-bold text-slate-400"
+                                        >
+                                            {{ p.category || "service" }}
+                                        </p>
+                                        <h4
+                                            class="font-black text-slate-900 dark:text-white leading-snug truncate"
+                                        >
+                                            {{ p.name }}
+                                        </h4>
+                                        <p
+                                            class="text-xs text-slate-400 mt-1 line-clamp-2"
+                                        >
+                                            {{ p.desc }}
+                                        </p>
+                                    </div>
+                                    <button
+                                        @click="toggleProductActive(p)"
+                                        class="shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold border transition"
+                                        :class="
+                                            p.isActive !== false
+                                                ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
+                                                : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                                        "
+                                        title="Toggle Active"
+                                    >
+                                        {{
+                                            p.isActive !== false
+                                                ? "ACTIVE"
+                                                : "HIDDEN"
+                                        }}
+                                    </button>
+                                </div>
+
+                                <div
+                                    class="mt-4 flex items-center justify-between"
+                                >
+                                    <div>
+                                        <p
+                                            class="text-[10px] uppercase font-bold text-slate-400"
+                                        >
+                                            Harga
+                                        </p>
+                                        <p
+                                            class="font-black text-slate-900 dark:text-white"
+                                        >
+                                            {{ formatRupiah(p.price || 0) }}
+                                        </p>
+                                    </div>
+
+                                    <div class="flex items-center gap-2">
+                                        <button
+                                            @click="openEditProduct(p)"
+                                            class="p-2 rounded-xl bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/10 text-slate-500 hover:text-indigo-600 transition"
+                                            title="Edit"
+                                        >
+                                            <Pencil :size="16" />
+                                        </button>
+                                        <button
+                                            @click="deleteProduct(p)"
+                                            class="p-2 rounded-xl bg-white dark:bg-black/30 border border-slate-200/70 dark:border-white/10 text-slate-400 hover:text-rose-500 transition"
+                                            title="Delete"
+                                        >
+                                            <Trash2 :size="16" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="mt-3 text-[10px] text-slate-400 font-mono truncate"
+                                >
+                                    id: {{ p.id }}
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="productsStore.all.length === 0"
+                                class="py-10 text-center text-slate-400 font-medium md:col-span-2 xl:col-span-3"
+                            >
+                                Belum ada produk di Firestore. Klik
+                                <b>Seed</b> untuk import dari products.js.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product Modal -->
+                <Teleport to="body">
+                    <transition name="fade">
+                        <div
+                            v-if="showProductModal"
+                            class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+                        >
+                            <div
+                                class="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+                                @click="showProductModal = false"
+                            ></div>
+
+                            <div
+                                class="relative w-full max-w-xl bg-white/95 dark:bg-[#1C1C1E]/95 backdrop-blur-2xl rounded-[24px] shadow-2xl border border-slate-200/60 dark:border-white/10 overflow-hidden"
+                            >
+                                <div
+                                    class="p-5 border-b border-slate-200/60 dark:border-white/10 flex items-center justify-between"
+                                >
+                                    <div>
+                                        <h3
+                                            class="text-lg font-black text-slate-900 dark:text-white"
+                                        >
+                                            {{
+                                                isEditingProduct
+                                                    ? "Edit Product"
+                                                    : "Add Product"
+                                            }}
+                                        </h3>
+                                        <p class="text-xs text-slate-400">
+                                            Basic fields + JSON config (biar
+                                            fleksibel kaya products.js).
+                                        </p>
+                                    </div>
+                                    <button
+                                        class="p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition text-slate-400"
+                                        @click="showProductModal = false"
+                                        title="Close"
+                                    >
+                                        <X :size="18" />
+                                    </button>
+                                </div>
+
+                                <div
+                                    class="p-5 max-h-[70vh] overflow-y-auto custom-scrollbar space-y-4"
+                                >
+                                    <div
+                                        v-if="productFormError"
+                                        class="p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-500/20 text-rose-600 dark:text-rose-300 text-xs font-bold"
+                                    >
+                                        {{ productFormError }}
+                                    </div>
+
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-3"
+                                    >
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Name</label
+                                            >
+                                            <input
+                                                v-model="productForm.name"
+                                                type="text"
+                                                placeholder="Nama produk"
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >ID (slug)</label
+                                            >
+                                            <input
+                                                v-model="productForm.id"
+                                                type="text"
+                                                :placeholder="
+                                                    isEditingProduct
+                                                        ? ''
+                                                        : 'auto dari nama'
+                                                "
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Category</label
+                                            >
+                                            <select
+                                                v-model="productForm.category"
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            >
+                                                <option value="candlerun">
+                                                    candlerun
+                                                </option>
+                                                <option value="heart">
+                                                    heart
+                                                </option>
+                                                <option value="special">
+                                                    special
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Icon Type</label
+                                            >
+                                            <input
+                                                v-model="productForm.iconType"
+                                                type="text"
+                                                placeholder="sparkles / heart / wind / ..."
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Price</label
+                                            >
+                                            <input
+                                                v-model="productForm.price"
+                                                type="number"
+                                                min="0"
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Tag</label
+                                            >
+                                            <input
+                                                v-model="productForm.tag"
+                                                type="text"
+                                                placeholder="Best Seller / New / ..."
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-indigo-500"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                            >Description</label
+                                        >
+                                        <textarea
+                                            v-model="productForm.desc"
+                                            rows="2"
+                                            class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-sm font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 resize-none"
+                                            placeholder="Deskripsi singkat"
+                                        ></textarea>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <label
+                                            class="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                v-model="productForm.isActive"
+                                                class="accent-indigo-600"
+                                            />
+                                            Active
+                                        </label>
+                                        <label
+                                            class="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                v-model="
+                                                    productForm.isCalculator
+                                                "
+                                                class="accent-indigo-600"
+                                            />
+                                            Calculator / Complex
+                                        </label>
+                                    </div>
+
+                                    <div
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-3"
+                                    >
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Variants (JSON Array)</label
+                                            >
+                                            <textarea
+                                                v-model="variantsJson"
+                                                rows="6"
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-xs font-mono text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 resize-none"
+                                                placeholder='[{"id":"v1","name":"Paket A","price":1000}]'
+                                            ></textarea>
+                                        </div>
+                                        <div>
+                                            <label
+                                                class="text-[10px] font-bold uppercase tracking-widest text-slate-400"
+                                                >Config (JSON Object)</label
+                                            >
+                                            <textarea
+                                                v-model="configJson"
+                                                rows="6"
+                                                class="mt-1 w-full px-4 py-3 rounded-2xl bg-slate-50 dark:bg-black/20 border-none text-xs font-mono text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-indigo-500 resize-none"
+                                                placeholder='{"minHearts":10,"maxHearts":100}'
+                                            ></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div
+                                    class="p-5 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-end gap-2"
+                                >
+                                    <button
+                                        @click="showProductModal = false"
+                                        class="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        @click="saveProduct"
+                                        class="px-5 py-2.5 rounded-xl font-bold text-sm text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg transition flex items-center gap-2"
+                                    >
+                                        <Save :size="16" /> Save
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </transition>
+                </Teleport>
+            </div>
+
+            <div
                 v-else-if="activeTab === 'announce'"
                 class="animate-in fade-in slide-in-from-bottom-4"
             >
@@ -1201,5 +1795,19 @@ const deleteAnnouncement = (id) => {
 .fade-enter-from,
 .fade-leave-to {
     opacity: 0;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.55);
+    border-radius: 999px;
+}
+:global(.dark) .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(100, 116, 139, 0.6);
 }
 </style>
