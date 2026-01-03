@@ -14,6 +14,7 @@ import {
     Timer,
     X,
     Info,
+    Download,
 } from "lucide-vue-next";
 import qrisStaticImage from "../assets/qris.jpg";
 
@@ -230,6 +231,27 @@ const openWhatsApp = () => {
 };
 
 const handleRetry = () => generateDynamicQR();
+
+// ✅ Download QR mini
+const downloadQR = () => {
+    if (!qrisState.value.data) return;
+
+    const safeOrder = (props.orderId || "order")
+        .toString()
+        .trim()
+        .replace(/[^a-z0-9-_]+/gi, "-")
+        .slice(0, 40);
+
+    const nominal = String(Math.round(Number(props.totalPrice || 0)));
+    const filename = `aiyashop-${safeOrder}-${nominal}.png`;
+
+    const a = document.createElement("a");
+    a.href = qrisState.value.data;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+};
 </script>
 
 <template>
@@ -242,7 +264,6 @@ const handleRetry = () => generateDynamicQR();
             @click="$emit('close')"
         ></div>
 
-        <!-- ✅ Tinggi modal dipaksa kompak di mobile -->
         <div
             class="w-full max-w-sm sm:max-w-md relative z-10 overflow-hidden rounded-[1.75rem] sm:rounded-[2.25rem] border border-white/10 shadow-2xl bg-white dark:bg-slate-950 animate-in zoom-in-95 duration-200 flex flex-col max-h-[86vh] sm:max-h-[88vh]"
         >
@@ -262,8 +283,6 @@ const handleRetry = () => generateDynamicQR();
                         >
                             Pembayaran Pesanan
                         </h3>
-
-                        <!-- ✅ anti overflow -->
                         <p
                             class="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate"
                         >
@@ -283,7 +302,6 @@ const handleRetry = () => generateDynamicQR();
                     </button>
                 </div>
 
-                <!-- Chips (lebih ringkas di mobile) -->
                 <div
                     class="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-bold"
                 >
@@ -301,7 +319,6 @@ const handleRetry = () => generateDynamicQR();
                     </div>
                 </div>
 
-                <!-- Tabs: label pendek di mobile, panjang di desktop -->
                 <div
                     class="mt-3 p-1.5 rounded-2xl bg-white/70 dark:bg-white/10 border border-slate-200 dark:border-white/10 flex gap-2"
                 >
@@ -347,11 +364,10 @@ const handleRetry = () => generateDynamicQR();
                 </div>
             </div>
 
-            <!-- Body (scroll) -->
+            <!-- Body -->
             <div
                 class="px-4 sm:px-6 py-4 overflow-y-auto custom-scrollbar flex-1"
             >
-                <!-- Total card (lebih pendek) -->
                 <div
                     class="rounded-3xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-4"
                 >
@@ -399,7 +415,6 @@ const handleRetry = () => generateDynamicQR();
 
                 <!-- QRIS -->
                 <div v-if="activeTab === 'qris'" class="mt-4 space-y-3">
-                    <!-- Loading -->
                     <div
                         v-if="qrisState.isLoading"
                         class="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4"
@@ -427,7 +442,6 @@ const handleRetry = () => generateDynamicQR();
                             </div>
                         </div>
 
-                        <!-- ✅ skeleton QR lebih kecil di mobile -->
                         <div
                             class="mt-4 w-full rounded-3xl bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 relative overflow-hidden"
                             style="aspect-ratio: 1 / 1"
@@ -445,13 +459,12 @@ const handleRetry = () => generateDynamicQR();
                         </div>
                     </div>
 
-                    <!-- Success -->
                     <div
                         v-else-if="!qrisState.error && qrisState.data"
                         class="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 p-4"
                     >
                         <div
-                            class="flex items-start justify-between gap-3 min-w-0"
+                            class="flex items-start justify-between gap-2 min-w-0"
                         >
                             <div class="min-w-0">
                                 <p
@@ -466,16 +479,28 @@ const handleRetry = () => generateDynamicQR();
                                 </p>
                             </div>
 
-                            <button
-                                @click="handleRetry"
-                                class="shrink-0 px-3 py-2 rounded-2xl text-xs font-black border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition flex items-center gap-2"
-                            >
-                                <RefreshCw :size="14" class="shrink-0" />
-                                <span class="whitespace-nowrap">Refresh</span>
-                            </button>
+                            <!-- ✅ actions mini: refresh + download -->
+                            <div class="flex items-center gap-2 shrink-0">
+                                <button
+                                    @click="handleRetry"
+                                    class="w-10 h-10 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition flex items-center justify-center"
+                                    aria-label="Refresh QR"
+                                    title="Refresh"
+                                >
+                                    <RefreshCw :size="16" />
+                                </button>
+
+                                <button
+                                    @click="downloadQR"
+                                    class="w-10 h-10 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition flex items-center justify-center"
+                                    aria-label="Download QR"
+                                    title="Download"
+                                >
+                                    <Download :size="16" />
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- ✅ QR lebih kecil di mobile -->
                         <div
                             class="mt-4 bg-white rounded-3xl border border-slate-200 dark:border-white/10 p-3 flex items-center justify-center"
                         >
@@ -486,7 +511,6 @@ const handleRetry = () => generateDynamicQR();
                             />
                         </div>
 
-                        <!-- ✅ Steps dipadatkan -->
                         <div
                             class="mt-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2"
                         >
@@ -498,12 +522,11 @@ const handleRetry = () => generateDynamicQR();
                             <p
                                 class="text-[11px] text-slate-500 dark:text-slate-300"
                             >
-                                Setelah bayar, klik tombol “Saya Sudah Bayar”.
+                                Setelah bayar, klik “Saya Sudah Bayar”.
                             </p>
                         </div>
                     </div>
 
-                    <!-- Error -->
                     <div
                         v-else
                         class="rounded-3xl border border-rose-200 dark:border-rose-500/20 bg-rose-50/70 dark:bg-rose-500/5 p-4"
@@ -611,7 +634,7 @@ const handleRetry = () => generateDynamicQR();
                 </div>
             </div>
 
-            <!-- Footer (sticky) -->
+            <!-- Footer -->
             <div
                 class="px-4 sm:px-6 py-4 border-t border-slate-100 dark:border-white/10 bg-white dark:bg-slate-950"
             >
