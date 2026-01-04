@@ -17,6 +17,7 @@ import {
     Download,
 } from "lucide-vue-next";
 import qrisStaticImage from "../assets/qris.jpg";
+import { formatRupiah } from "../utils/format";
 
 const props = defineProps({
     isOpen: Boolean,
@@ -49,14 +50,6 @@ const rekening = {
 
 const copiedNumber = ref(false);
 const copiedTotal = ref(false);
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 // ===== TLV helpers =====
 function parseTLV(payload) {
     let i = 0;

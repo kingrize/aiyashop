@@ -2,6 +2,7 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { Heart, Sparkles, Zap, Coffee, Activity, Frown } from 'lucide-vue-next';
+import { formatRupiah } from "../utils/format";
 
 const PRICE_PER_50_HEART = 5000;
 const PRICE_PER_HEART = PRICE_PER_50_HEART / 50; 
@@ -25,8 +26,7 @@ const speedInfo = computed(() => {
 });
 
 const isValidOrder = computed(() => order.value.desiredHearts >= MIN_ORDER);
-const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(val);
-
+const formatCurrency = formatRupiah;
 const generateWhatsappLink = () => {
   if (!isValidOrder.value) return;
   const text = `Halo Admin Aiya! ✨%0A%0AAku mau jajan Heart dong (via Kalkulator):%0A` +

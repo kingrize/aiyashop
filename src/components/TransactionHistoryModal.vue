@@ -1,5 +1,6 @@
 <script setup>
 import { useUserStore } from "../stores/user";
+import { formatRupiah } from "../utils/format";
 import {
     X,
     ArrowUpRight,
@@ -10,14 +11,6 @@ import {
 
 const userStore = useUserStore();
 const emit = defineEmits(["close"]);
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 const formatDate = (date) => {
     if (!date) return "-";
     // Format: 10 Mei, 14:30

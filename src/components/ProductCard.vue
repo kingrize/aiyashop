@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from "vue";
 import { useCartStore } from "../stores/cart";
+import { formatRupiah } from "../utils/format";
 import {
     Sparkles,
     Heart,
@@ -49,13 +50,7 @@ const iconComponent = computed(() => {
     return map[props.product.iconType?.toLowerCase()] || Sparkles;
 });
 
-const formatCurrency = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
+const formatCurrency = formatRupiah;
 // ====== Cute theme accents (base ikut tema via card-soft) ======
 const theme = computed(() => {
     const type = props.product.category;

@@ -34,8 +34,10 @@ import {
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
 
-import skyKidGif from "../assets/skykid.gif";
 import skykidMoth from "../assets/moth.gif";
+import skykidWebm from "../assets/skykid.webm";
+import skykidMp4 from "../assets/skykid.mp4";
+import { formatRupiah } from "../utils/format";
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -88,13 +90,6 @@ const filteredProducts = computed(() => {
 const scrollToServices = () => {
     document.getElementById("services").scrollIntoView({ behavior: "smooth" });
 };
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 const memberName = computed(() => {
     if (userStore.memberData?.displayName)
         return userStore.memberData.displayName.split(" ")[0];
@@ -237,11 +232,19 @@ const faqs = [
                         <div
                             class="absolute inset-8 md:inset-4 bg-white/40 dark:bg-white/5 rounded-blob backdrop-blur-sm border border-white/20 dark:border-white/5 animate-float-slow delay-150"
                         ></div>
-                        <img
-                            :src="skyKidGif"
-                            alt="Sky Kid Mascot"
+                        <video
                             class="relative z-10 w-48 h-48 md:w-72 md:h-72 object-contain scale-110 hover:scale-125 transition-transform duration-500 -mt-2 animate-float-smooth"
-                        />
+                            autoplay
+                            muted
+                            loop
+                            playsinline
+                            preload="metadata"
+                            disablepictureinpicture
+                            aria-label="Sky Kid Mascot"
+                        >
+                            <source :src="skykidWebm" type="video/webm" />
+                            <source :src="skykidMp4" type="video/mp4" />
+                        </video>
                         <div
                             class="absolute -bottom-4 md:-bottom-6 bg-white/90 dark:bg-slate-800/90 backdrop-blur px-4 py-2 md:px-5 md:py-3 rounded-2xl shadow-lg border border-slate-100 dark:border-slate-700 flex items-center gap-2 md:gap-3 animate-bounce-slow z-20"
                         >
@@ -269,10 +272,22 @@ const faqs = [
                                 >
                                     <Sparkles :size="14" /> Member Dashboard
                                 </p>
-                                <img
-                                    :src="skyKidGif"
+                                <video
                                     class="w-8 h-8 object-contain md:hidden animate-bounce-slow"
-                                />
+                                    autoplay
+                                    muted
+                                    loop
+                                    playsinline
+                                    preload="metadata"
+                                    disablepictureinpicture
+                                    aria-label="Sky Kid Mascot"
+                                >
+                                    <source
+                                        :src="skykidWebm"
+                                        type="video/webm"
+                                    />
+                                    <source :src="skykidMp4" type="video/mp4" />
+                                </video>
                             </div>
                             <h1
                                 class="text-2xl md:text-5xl font-bold text-slate-800 dark:text-slate-100 leading-tight"

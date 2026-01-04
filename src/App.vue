@@ -1,5 +1,5 @@
 <script setup>
-import { ref, provide } from "vue";
+import { ref, provide, computed } from "vue";
 import { RouterView, useRoute } from "vue-router";
 import { Cloud } from "lucide-vue-next";
 
@@ -18,17 +18,19 @@ provide("globalLoading", {
     start: () => (isLoading.value = true),
     finish: () => (isLoading.value = false),
 });
+
+const isAdminRoute = computed(() => route.path.includes("/admin"));
 </script>
 
 <template>
     <div
         class="min-h-screen bg-cream dark:bg-charcoal font-sans text-slate-600 dark:text-slate-300 flex flex-col transition-colors duration-300 overflow-x-hidden"
-        :class="{ 'pb-20 md:pb-0': !route.path.includes('/admin') }"
+        :class="{ 'pb-20 md:pb-0': !isAdminRoute }"
     >
         <transition name="fade">
             <div
                 v-if="isLoading"
-                class="fixed inset-0 z-[9999] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center"
+                class="fixed inset-0 z-[9999] bg-white/80 dark:bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center"
             >
                 <div class="relative">
                     <Cloud :size="64" class="text-sky-200 animate-pulse" />
@@ -48,9 +50,8 @@ provide("globalLoading", {
             </div>
         </transition>
 
-        <GlobalBanner v-if="!route.path.includes('/admin')" />
-
-        <Navbar v-if="!route.path.includes('/admin')" />
+        <GlobalBanner v-if="!isAdminRoute" />
+        <Navbar v-if="!isAdminRoute" />
 
         <main class="flex-1 w-full">
             <router-view v-slot="{ Component }">
@@ -60,8 +61,8 @@ provide("globalLoading", {
             </router-view>
         </main>
 
-        <Footer v-if="!route.path.includes('/admin')" />
-        <BottomNav v-if="!route.path.includes('/admin')" />
+        <Footer v-if="!isAdminRoute" />
+        <BottomNav v-if="!isAdminRoute" />
 
         <CartDrawer />
         <Toast />
@@ -90,5 +91,12 @@ provide("globalLoading", {
 .page-fade-leave-to {
     opacity: 0;
     transform: translateY(-10px);
+}
+
+/* PERF: blur overlay itu berat di HP, matiin blur di layar kecil */
+@media (max-width: 640px) {
+    .backdrop-blur-sm {
+        backdrop-filter: none !important;
+    }
 }
 </style>

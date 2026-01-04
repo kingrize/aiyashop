@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed } from "vue";
 import { useUserStore } from "../stores/user";
+import { formatRupiah } from "../utils/format";
 import {
     X,
     Wallet,
@@ -45,14 +46,6 @@ const paymentMethods = [
         color: "text-indigo-500 bg-indigo-100 dark:bg-indigo-900/30",
     },
 ];
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 const selectAmount = (val) => {
     amount.value = val;
 };

@@ -5,6 +5,7 @@ import { usePromoStore } from "../../stores/promo";
 import { useAnnouncementStore } from "../../stores/announcement";
 import { useRouter } from "vue-router";
 import ProductsPanel from "./ProductsPanel.vue";
+import { formatRupiah } from "../../utils/format";
 import {
     LayoutGrid,
     Users,
@@ -91,14 +92,6 @@ const filteredUsers = computed(() => {
     }
     return users;
 });
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 onMounted(async () => {
     await userStore.fetchAllUsers();
     await promoStore.fetchAllPromos();

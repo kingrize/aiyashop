@@ -1,6 +1,7 @@
 <script setup>
-import { ref, computed } from "vue";
+import { defineAsyncComponent, ref, computed } from "vue";
 import { useCartStore } from "../stores/cart";
+import { formatRupiah } from "../utils/format";
 import {
     X,
     Check,
@@ -9,7 +10,7 @@ import {
     ShoppingBag,
     CheckCircle,
 } from "lucide-vue-next"; // Tambah CheckCircle
-import MiniHeartCalculator from "./MiniHeartCalculator.vue";
+const MiniHeartCalculator = defineAsyncComponent(() => import("./MiniHeartCalculator.vue"));
 
 const props = defineProps({
     isOpen: Boolean,
@@ -39,13 +40,7 @@ const currentPrice = computed(() => {
     return basePrice.value;
 });
 
-const formatCurrency = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
+const formatCurrency = formatRupiah;
 // --- LOGIKA PEMILIHAN VARIAN (UX UPGRADE) ---
 const toggleVariant = (variant) => {
     // 1. Kasus Single Selection (Radio Button) - Contoh: CR 15 vs 20

@@ -2,6 +2,7 @@
 import { ref, reactive, computed, onMounted } from "vue";
 import { useProductsStore } from "../../stores/products";
 import { products as localProducts } from "../../data/products";
+import { formatRupiah } from "../../utils/format";
 import {
     Search,
     Plus,
@@ -27,7 +28,6 @@ const showModal = ref(false);
 const editingProduct = ref(null);
 const showAdvanced = ref(false);
 
-// State form
 const form = reactive({
     type: "special",
     name: "",
@@ -41,14 +41,6 @@ const form = reactive({
     isCalculator: false,
     variants: [],
 });
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 const iconByType = (type) => {
     if (type === "heart") return "heart";
     if (type === "candlerun") return "flame";
@@ -82,8 +74,6 @@ const slugify = (str) =>
 onMounted(async () => {
     if (productsStore.fetchAll)
         await productsStore.fetchAll({ fallback: localProducts });
-    else if (productsStore.fetchAllProducts)
-        await productsStore.fetchAllProducts();
 });
 
 const items = computed(() => productsStore.items || productsStore.all || []);
@@ -112,14 +102,8 @@ const filteredProducts = computed(() => {
     });
 });
 
-// --- VARIANT LOGIC ---
-const addVariant = () => {
-    form.variants.push({ name: "", price: 0 });
-};
-
-const removeVariant = (index) => {
-    form.variants.splice(index, 1);
-};
+const addVariant = () => form.variants.push({ name: "", price: 0 });
+const removeVariant = (index) => form.variants.splice(index, 1);
 
 const openAdd = () => {
     editingProduct.value = null;
@@ -146,7 +130,6 @@ const openEdit = (p) => {
     const existingVariants = Array.isArray(p.variants)
         ? p.variants.map((v) => ({ ...v }))
         : [];
-
     Object.assign(form, {
         type: p.category || "special",
         name: p.name || "",
@@ -164,12 +147,9 @@ const openEdit = (p) => {
 };
 
 const closeModal = () => (showModal.value = false);
-
 const refresh = async () => {
     if (productsStore.fetchAll)
         await productsStore.fetchAll({ fallback: localProducts });
-    else if (productsStore.fetchAllProducts)
-        await productsStore.fetchAllProducts();
 };
 
 const save = async () => {
@@ -190,15 +170,12 @@ const save = async () => {
         (showAdvanced.value && form.id?.trim()
             ? form.id.trim()
             : slugify(name));
-
     if (!id) return alert("ID gagal dibuat.");
 
     const base = editingProduct.value ? { ...editingProduct.value } : {};
-
     const cleanVariants = form.variants
         .map((v) => ({ name: v.name.trim(), price: Number(v.price || 0) }))
         .filter((v) => v.name !== "");
-
     const isCalc = type === "calculator" || form.isCalculator;
 
     const payload = {
@@ -231,16 +208,12 @@ const save = async () => {
     };
 
     if (productsStore.upsert) await productsStore.upsert(payload);
-    else return alert("Store error.");
-
     await refresh();
     closeModal();
 };
 
 const toggleActive = async (p) => {
-    if (productsStore.toggleActive)
-        await productsStore.toggleActive(p.id, p.isActive);
-    else if (productsStore.upsert)
+    if (productsStore.upsert)
         await productsStore.upsert({ ...p, isActive: !(p.isActive !== false) });
     await refresh();
 };
@@ -264,7 +237,7 @@ const TypeIcon = (type) => {
     return Sparkles;
 };
 
-// --- Styling Helpers ---
+// Colors Helper
 const getCardGradient = (type) => {
     if (type === "heart")
         return "from-pink-500/10 to-rose-500/5 border-pink-200/50 dark:border-pink-500/20";
@@ -274,7 +247,6 @@ const getCardGradient = (type) => {
         return "from-indigo-500/10 to-violet-500/5 border-indigo-200/50 dark:border-indigo-500/20";
     return "from-sky-500/10 to-blue-500/5 border-sky-200/50 dark:border-sky-500/20";
 };
-
 const getIconColor = (type) => {
     if (type === "heart") return "text-pink-500";
     if (type === "candlerun") return "text-orange-500";
@@ -285,38 +257,34 @@ const getIconColor = (type) => {
 
 <template>
     <div class="animate-in fade-in slide-in-from-bottom-6 pb-24">
+        <!-- HEADER -->
         <div
             class="sticky top-0 z-30 pt-2 pb-6 -mx-2 px-2 bg-gradient-to-b from-[#f8f9fd] via-[#f8f9fd]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95"
         >
             <div class="flex flex-col md:flex-row md:items-center gap-4">
                 <div class="flex-1 relative group">
                     <div
-                        class="absolute inset-y-0 left-4 flex items-center pointer-events-none transition-colors duration-300"
-                        :class="
-                            productSearch
-                                ? 'text-indigo-500'
-                                : 'text-slate-400 group-focus-within:text-indigo-500'
-                        "
+                        class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors"
                     >
                         <Search :size="18" stroke-width="2.5" />
                     </div>
+                    <!-- OPTIMASI: backdrop-blur-md cukup (xl berat) -->
                     <input
                         v-model="productSearch"
                         placeholder="Search Sky Products..."
-                        class="w-full pl-12 pr-4 py-3.5 rounded-[1.5rem] bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 shadow-sm focus:shadow-md focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 text-sm font-bold text-slate-700 dark:text-slate-200 placeholder:text-slate-400 transition-all duration-300"
+                        class="w-full pl-12 pr-4 py-3.5 rounded-[1.5rem] bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-sm focus:ring-4 focus:ring-indigo-500/10 text-sm font-bold transition-all"
                     />
                 </div>
-
                 <div class="flex gap-3">
                     <button
                         @click="seed"
-                        class="px-5 py-3.5 rounded-[1.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:bg-white transition-all active:scale-95"
+                        class="px-5 py-3.5 rounded-[1.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-500 hover:bg-white transition-all active:scale-95"
                     >
                         <Package :size="18" />
                     </button>
                     <button
                         @click="openAdd"
-                        class="pl-4 pr-6 py-3.5 rounded-[1.5rem] bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-xs font-bold tracking-wide flex items-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-95"
+                        class="pl-4 pr-6 py-3.5 rounded-[1.5rem] bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-xs font-bold tracking-wide flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95"
                     >
                         <div class="bg-white/20 p-1 rounded-full">
                             <Plus :size="14" stroke-width="3" />
@@ -327,14 +295,15 @@ const getIconColor = (type) => {
             </div>
         </div>
 
+        <!-- GRID -->
         <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             <div
                 v-for="p in filteredProducts"
                 :key="p.id"
-                class="group relative p-6 rounded-[2rem] bg-gradient-to-br backdrop-blur-md transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
+                class="group relative p-6 rounded-[2rem] bg-gradient-to-br backdrop-blur-sm transition-all duration-500 hover:-translate-y-1 hover:shadow-xl"
                 :class="[
                     getCardGradient(p.category),
-                    'bg-white/70 dark:bg-slate-900/60 shadow-sm',
+                    'bg-white/80 dark:bg-slate-900/70 shadow-sm',
                 ]"
             >
                 <div
@@ -364,9 +333,8 @@ const getIconColor = (type) => {
                                 <span
                                     v-if="p.variants?.length"
                                     class="bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 px-1.5 py-0.5 rounded text-[8px]"
+                                    >{{ p.variants.length }} VARIANTS</span
                                 >
-                                    {{ p.variants.length }} VARIANTS
-                                </span>
                             </p>
                             <h4
                                 class="text-base font-black text-slate-800 dark:text-slate-100 leading-tight line-clamp-1"
@@ -375,10 +343,9 @@ const getIconColor = (type) => {
                             </h4>
                         </div>
                     </div>
-
                     <button
                         @click="toggleActive(p)"
-                        class="w-12 h-7 rounded-full p-1 transition-colors duration-300 focus:outline-none flex items-center shadow-inner"
+                        class="w-12 h-7 rounded-full p-1 transition-colors focus:outline-none flex items-center shadow-inner"
                         :class="
                             p.isActive !== false
                                 ? 'bg-emerald-400/20 dark:bg-emerald-500/20'
@@ -386,7 +353,7 @@ const getIconColor = (type) => {
                         "
                     >
                         <div
-                            class="w-5 h-5 rounded-full shadow-md transform transition-transform duration-300 flex items-center justify-center"
+                            class="w-5 h-5 rounded-full shadow-md transform transition-transform flex items-center justify-center"
                             :class="[
                                 p.isActive !== false
                                     ? 'translate-x-5 bg-emerald-500 text-white'
@@ -397,8 +364,7 @@ const getIconColor = (type) => {
                                 v-if="p.isActive !== false"
                                 :size="10"
                                 stroke-width="4"
-                            />
-                            <X v-else :size="10" stroke-width="4" />
+                            /><X v-else :size="10" stroke-width="4" />
                         </div>
                     </button>
                 </div>
@@ -415,7 +381,7 @@ const getIconColor = (type) => {
                             :class="
                                 p.isActive !== false
                                     ? 'text-slate-800 dark:text-white'
-                                    : 'text-slate-400 decoration-slate-400/50 line-through'
+                                    : 'text-slate-400 line-through'
                             "
                         >
                             {{
@@ -425,19 +391,18 @@ const getIconColor = (type) => {
                             }}
                         </p>
                     </div>
-
                     <div
-                        class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0"
+                        class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0"
                     >
                         <button
                             @click="openEdit(p)"
-                            class="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                            class="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300 hover:bg-indigo-100 transition-colors"
                         >
                             <Pencil :size="16" stroke-width="2.5" />
                         </button>
                         <button
                             @click="remove(p)"
-                            class="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
+                            class="p-2.5 rounded-xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300 hover:bg-rose-100 transition-colors"
                         >
                             <Trash2 :size="16" stroke-width="2.5" />
                         </button>
@@ -446,25 +411,27 @@ const getIconColor = (type) => {
             </div>
         </div>
 
+        <!-- MODAL -->
         <transition name="modal-bounce">
             <div
                 v-if="showModal"
                 class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
             >
+                <!-- OPTIMASI: Opacity lebih pekat, blur dikurangi -->
                 <div
-                    class="absolute inset-0 bg-slate-900/30 backdrop-blur-lg transition-opacity"
+                    class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
                     @click="closeModal"
                 ></div>
 
                 <div
-                    class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-2xl rounded-[2.5rem] shadow-2xl border border-white/20 ring-1 ring-black/5 p-6 sm:p-8 flex flex-col"
+                    class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/20 ring-1 ring-black/5 p-6 sm:p-8 flex flex-col"
                 >
                     <div
                         class="flex items-center justify-between mb-8 sticky top-0 bg-inherit z-10 pb-2 border-b border-dashed border-slate-200 dark:border-white/10"
                     >
                         <div>
                             <h2
-                                class="text-2xl font-black bg-gradient-to-br from-slate-800 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent"
+                                class="text-2xl font-black text-slate-800 dark:text-white"
                             >
                                 {{
                                     editingProduct
@@ -506,15 +473,14 @@ const getIconColor = (type) => {
                                     :class="
                                         form.type === t
                                             ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-300 scale-100 font-bold'
-                                            : 'text-slate-400 hover:text-slate-600 scale-95 hover:bg-white/50'
+                                            : 'text-slate-400 scale-95 hover:bg-white/50'
                                     "
                                 >
                                     <component
                                         :is="TypeIcon(t)"
                                         :size="18"
                                         class="mb-1"
-                                    />
-                                    <span class="text-[9px] uppercase">{{
+                                    /><span class="text-[9px] uppercase">{{
                                         t === "calculator" ? "Calc" : t
                                     }}</span>
                                 </button>
@@ -530,21 +496,19 @@ const getIconColor = (type) => {
                                 <input
                                     v-model="form.name"
                                     placeholder="e.g. Daily Heart"
-                                    class="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-2 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500/30 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all placeholder:font-normal"
+                                    class="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-2 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500/30 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all"
                                 />
                             </div>
-
                             <div class="group">
                                 <label
                                     class="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1 mb-1 block"
-                                >
-                                    {{
+                                    >{{
                                         form.type === "calculator" ||
                                         form.isCalculator
                                             ? "Unit Price (Per 1 Item)"
                                             : "Price (IDR)"
-                                    }}
-                                </label>
+                                    }}</label
+                                >
                                 <div class="relative">
                                     <span
                                         class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm"
@@ -572,8 +536,7 @@ const getIconColor = (type) => {
                                     <Layers
                                         :size="16"
                                         class="text-indigo-500"
-                                    />
-                                    <span
+                                    /><span
                                         class="text-xs font-bold uppercase tracking-wide"
                                         >Variants</span
                                     >
@@ -585,19 +548,17 @@ const getIconColor = (type) => {
                                     + ADD OPTION
                                 </button>
                             </div>
-
                             <div class="p-2 space-y-1">
                                 <div
                                     v-if="!form.variants.length"
                                     class="text-center py-6 text-slate-400 text-xs italic"
                                 >
-                                    No variants added. Product will use base
-                                    price.
+                                    No variants added.
                                 </div>
                                 <div
                                     v-for="(v, idx) in form.variants"
                                     :key="idx"
-                                    class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm group"
+                                    class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"
                                 >
                                     <div
                                         class="w-6 h-6 flex items-center justify-center text-slate-300 font-mono text-[10px]"
@@ -606,7 +567,7 @@ const getIconColor = (type) => {
                                     </div>
                                     <input
                                         v-model="v.name"
-                                        placeholder="Option Name (e.g. Earth Trial)"
+                                        placeholder="Option Name"
                                         class="flex-1 bg-transparent text-xs font-bold outline-none text-slate-700 dark:text-slate-200"
                                     />
                                     <div
@@ -615,8 +576,7 @@ const getIconColor = (type) => {
                                         <span
                                             class="text-[10px] text-slate-400 mr-1"
                                             >Rp</span
-                                        >
-                                        <input
+                                        ><input
                                             v-model.number="v.price"
                                             type="number"
                                             class="w-16 bg-transparent text-xs font-bold outline-none tabular-nums text-right"
@@ -625,7 +585,7 @@ const getIconColor = (type) => {
                                     </div>
                                     <button
                                         @click="removeVariant(idx)"
-                                        class="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                        class="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
                                     >
                                         <MinusCircle :size="16" />
                                     </button>
@@ -638,8 +598,7 @@ const getIconColor = (type) => {
                                 @click="showAdvanced = !showAdvanced"
                                 class="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-500 transition-colors mx-auto"
                             >
-                                <MoreHorizontal :size="16" />
-                                {{
+                                <MoreHorizontal :size="16" />{{
                                     showAdvanced
                                         ? "Hide Advanced Settings"
                                         : "Show Advanced Settings"
@@ -655,19 +614,17 @@ const getIconColor = (type) => {
                                 <label
                                     class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
                                     >CUSTOM ID</label
-                                >
-                                <input
+                                ><input
                                     v-model="form.id"
                                     placeholder="Auto-generated"
-                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-mono text-slate-600 dark:text-slate-300 border-none focus:ring-2 focus:ring-indigo-500/20"
+                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-mono text-slate-600 dark:text-slate-300 border-none"
                                 />
                             </div>
                             <div class="group">
                                 <label
                                     class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
                                     >TAG LABEL</label
-                                >
-                                <input
+                                ><input
                                     v-model="form.tag"
                                     placeholder="Label"
                                     class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-bold border-none"
@@ -677,8 +634,7 @@ const getIconColor = (type) => {
                                 <label
                                     class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
                                     >ORDER</label
-                                >
-                                <input
+                                ><input
                                     v-model.number="form.order"
                                     type="number"
                                     class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-bold border-none"
@@ -688,8 +644,7 @@ const getIconColor = (type) => {
                                 <label
                                     class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
                                     >DESCRIPTION</label
-                                >
-                                <textarea
+                                ><textarea
                                     v-model="form.desc"
                                     rows="2"
                                     class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-medium border-none resize-none"
@@ -712,8 +667,7 @@ const getIconColor = (type) => {
                             @click="save"
                             class="flex-[2] py-4 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
                         >
-                            <Check :size="18" stroke-width="3" />
-                            Save Product
+                            <Check :size="18" stroke-width="3" /> Save Product
                         </button>
                     </div>
                 </div>
@@ -723,7 +677,6 @@ const getIconColor = (type) => {
 </template>
 
 <style scoped>
-/* Custom Animations for Modal */
 .modal-bounce-enter-active {
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -735,8 +688,6 @@ const getIconColor = (type) => {
     opacity: 0;
     transform: scale(0.9) translateY(20px);
 }
-
-/* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
 }
@@ -750,8 +701,6 @@ const getIconColor = (type) => {
 .dark .custom-scrollbar::-webkit-scrollbar-thumb {
     background-color: #334155;
 }
-
-/* Remove Arrows from Number Input */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
     -webkit-appearance: none;

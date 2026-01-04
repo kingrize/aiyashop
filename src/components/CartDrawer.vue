@@ -1,9 +1,8 @@
 <script setup>
-import { ref, computed, watch, reactive } from "vue";
+import { defineAsyncComponent, ref, computed, watch, reactive } from "vue";
 import { useCartStore } from "../stores/cart";
 import { usePromoStore } from "../stores/promo";
 import { useUserStore } from "../stores/user";
-import ManualPaymentModal from "./ManualPaymentModal.vue";
 import {
     ShoppingBag,
     X,
@@ -41,6 +40,8 @@ import {
     serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { formatRupiah } from "../utils/format";
+const ManualPaymentModal = defineAsyncComponent(() => import("./ManualPaymentModal.vue"));
 
 const store = useCartStore();
 const promoStore = usePromoStore();
@@ -104,14 +105,6 @@ const getItemTheme = (item) => {
         return "bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400";
     return "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
 };
-
-const formatRupiah = (num) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        minimumFractionDigits: 0,
-    }).format(num);
-
 const MIN_ORDER_FOR_PROMO = 10000;
 const amountNeededForPromo = computed(() =>
     Math.max(0, MIN_ORDER_FOR_PROMO - store.totalPrice),
@@ -251,13 +244,13 @@ const processCheckout = (statusBayar) => {
         <transition name="fade">
             <div
                 v-if="store.isOpen"
-                class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] transition-opacity"
+                class="fixed inset-0 bg-slate-900/40 backdrop-blur-none sm:backdrop-blur-sm z-[60] transition-opacity"
                 @click="store.toggleCart()"
             ></div>
         </transition>
 
         <div
-            class="fixed top-0 right-0 h-full w-full md:w-[420px] bg-[#FDFBF7] dark:bg-charcoal z-[70] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
+            class="drawer-panel transform-gpu fixed top-0 right-0 h-full w-full md:w-[420px] bg-[#FDFBF7] dark:bg-charcoal z-[70] shadow-2xl transform transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1)"
             :class="store.isOpen ? 'translate-x-0' : 'translate-x-full'"
         >
             <div class="h-full flex flex-col relative overflow-hidden">
@@ -266,7 +259,7 @@ const processCheckout = (statusBayar) => {
                 ></div>
 
                 <div
-                    class="p-6 flex justify-between items-center bg-white/50 dark:bg-charcoal/80 backdrop-blur-md border-b border-sky-100/50 dark:border-slate-800"
+                    class="p-6 flex justify-between items-center bg-white/50 dark:bg-charcoal/80 backdrop-blur-sm md:backdrop-blur-md border-b border-sky-100/50 dark:border-slate-800"
                 >
                     <h2
                         class="text-xl font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2"
@@ -311,7 +304,7 @@ const processCheckout = (statusBayar) => {
 
                     <div
                         v-else
-                        v-for="item in store.items"
+                        v-for="item in store.items" v-memo="[item.id, item.qty]"
                         :key="item.id"
                         class="bg-white dark:bg-graphite p-4 rounded-3xl border border-sky-50 dark:border-slate-700 shadow-sm flex gap-4 items-start group hover:shadow-md transition relative"
                     >
@@ -807,6 +800,8 @@ const processCheckout = (statusBayar) => {
 </template>
 
 <style scoped>
+.drawer-panel { will-change: transform; }
+
 .fade-enter-active,
 .fade-leave-active {
     transition: opacity 0.3s ease;

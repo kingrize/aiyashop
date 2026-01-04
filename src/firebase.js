@@ -2,7 +2,6 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getAnalytics } from "firebase/analytics";
 
 // KONFIGURASI FIREBASE
 // Kita tambahkan 'export' agar bisa dipanggil di src/stores/user.js untuk fitur Admin
@@ -17,7 +16,19 @@ export const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
+
+// Analytics itu berat dan tidak perlu untuk dev/SSR.
+// Kita lazy-load hanya di production dan hanya di browser.
+(async function lazyAnalytics() {
+  try {
+    if (import.meta.env.PROD && typeof window !== "undefined") {
+      const { getAnalytics } = await import("firebase/analytics");
+      getAnalytics(app);
+    }
+  } catch (e) {
+    // ignore analytics errors
+  }
+})();
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);

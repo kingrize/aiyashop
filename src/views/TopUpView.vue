@@ -2,6 +2,7 @@
 import { ref, reactive } from "vue";
 import { useUserStore } from "../stores/user";
 import { useRouter } from "vue-router";
+import { formatRupiah } from "../utils/format";
 import {
     ChevronLeft,
     Wallet,
@@ -58,14 +59,6 @@ const steps = [
     { title: "Transfer", desc: "Lakukan pembayaran sesuai instruksi admin." },
     { title: "Selesai!", desc: "Saldo akan bertambah di akun kamu." },
 ];
-
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
-
 const selectAmount = (val) => {
     amount.value = val;
 };

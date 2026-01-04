@@ -8,6 +8,7 @@ export const useCartStore = defineStore("cart", {
     items: JSON.parse(localStorage.getItem("aiyashop_cart")) || [],
     isOpen: false,
     lastAddedTime: null,
+    _saveTimer: null,
   }),
   getters: {
     totalItems: (state) => state.items.reduce((acc, item) => acc + item.qty, 0),
@@ -17,7 +18,15 @@ export const useCartStore = defineStore("cart", {
   actions: {
     // Helper untuk simpan ke LocalStorage
     saveToLocal() {
-      localStorage.setItem("aiyashop_cart", JSON.stringify(this.items));
+      // Debounce write to avoid jank on rapid updates/opening UI
+      if (this._saveTimer) clearTimeout(this._saveTimer);
+      this._saveTimer = setTimeout(() => {
+        try {
+          localStorage.setItem("aiyashop_cart", JSON.stringify(this.items));
+        } catch (e) {
+          // ignore quota / private mode
+        }
+      }, 150);
     },
 
     addToCart(product) {

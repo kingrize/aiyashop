@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import { formatRupiah } from "../utils/format";
 import {
     Minus,
     Plus,
@@ -37,13 +38,7 @@ const slots = ref(5);
 // Harga per Heart (Default 100)
 const pricePerHeart = computed(() => config.value.pricePerHeart ?? 100);
 
-const formatCurrency = (value) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(value || 0);
-
+const formatCurrency = formatRupiah;
 // BONUS LOGIC
 const bonusHearts = computed(() => {
     if (!hasBonus.value || heartCount.value <= 0) return 0;

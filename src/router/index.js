@@ -1,5 +1,7 @@
-// LOKASI FILE: src/router/index.js
 import { createRouter, createWebHistory } from "vue-router";
+import HomeView from "../views/HomeView.vue";
+// HAPUS import AdminDashboard statis di sini agar ringan
+
 import { useUserStore } from "../stores/user";
 
 const router = createRouter({
@@ -8,84 +10,72 @@ const router = createRouter({
     {
       path: "/",
       name: "home",
-      component: () => import("../views/HomeView.vue"),
-      meta: { title: "AiyaShop - Jasa Joki Sky: Children of the Light" },
+      component: HomeView,
     },
     {
-      path: "/join-member",
-      name: "join-member",
+      path: "/join",
+      name: "join",
       component: () => import("../views/JoinMemberView.vue"),
-      meta: { title: "Join Member Premium" },
     },
     {
       path: "/top-up",
       name: "top-up",
       component: () => import("../views/TopUpView.vue"),
-      meta: { title: "Isi Saldo Member" },
+      meta: { requiresAuth: true },
     },
-
-    // --- RUTE BARU: MEMBER SETTINGS ---
     {
-      path: "/member/settings",
+      path: "/me",
       name: "member-settings",
       component: () => import("../views/member/MemberSettings.vue"),
-      meta: { title: "Pengaturan Akun" },
+      meta: { requiresAuth: true },
     },
-
-    // --- ADMIN ROUTE ---
     {
       path: "/admin",
-      name: "admin-dashboard",
+      name: "admin",
+      // OPTIMASI: Lazy Load (Code Splitting)
+      // Kode admin hanya di-download saat user membuka halaman admin
       component: () => import("../views/admin/AdminDashboard.vue"),
-      meta: {
-        title: "Admin Dashboard",
-        requiresAdmin: true,
-      },
+      meta: { requiresAuth: true, requiresAdmin: true },
     },
-
-    // 404
     {
       path: "/:pathMatch(.*)*",
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
-      meta: { title: "404 OOB - Tersesat?" },
     },
   ],
   scrollBehavior(to, from, savedPosition) {
-    if (to.hash) {
-      return { el: to.hash, behavior: "smooth" };
-    }
-    return { top: 0 };
+    return { top: 0, behavior: "smooth" };
   },
 });
 
-// --- NAVIGATION GUARD ---
+// Navigation Guard
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore();
-  document.title = to.meta.title || "AiyaShop";
 
+  // Tunggu auth init jika belum
   if (userStore.loading) {
     await new Promise((resolve) => {
-      const unsubscribe = userStore.$subscribe((mutation, state) => {
+      const unwatch = userStore.$subscribe((mutation, state) => {
         if (!state.loading) {
-          unsubscribe();
+          unwatch();
           resolve();
         }
       });
+      // Fallback safety biar ga stuck
       if (!userStore.loading) resolve();
     });
   }
 
-  // Cek Admin
-  if (to.meta.requiresAdmin) {
-    if (!userStore.user || !userStore.isAdmin) {
-      alert("Akses Ditolak: Khusus Admin 🚫");
-      next("/");
-      return;
-    }
-  }
+  const isAuthenticated = !!userStore.user;
+  const isAdmin = userStore.isAdmin;
 
-  next();
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next({ name: "join" });
+  } else if (to.meta.requiresAdmin && !isAdmin) {
+    next({ name: "home" });
+  } else {
+    next();
+  }
 });
 
 export default router;
