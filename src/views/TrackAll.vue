@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import {
+    Heart,
     Package,
     Sparkles,
     Search,
@@ -50,11 +51,43 @@ const statusIcon = (status) => {
 
 const statusBadge = (status) => {
     const s = String(status || "process").toLowerCase();
+    // Pastikan kebaca di light & dark (sebelumnya terlalu nyaru di light)
     if (s === "done")
-        return "bg-emerald-500/15 text-emerald-300 border-emerald-400/20";
+        return "bg-emerald-100 text-emerald-900 border-emerald-300/70 shadow-sm shadow-emerald-200/40 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/20 dark:shadow-none";
     if (s === "paused")
-        return "bg-amber-500/15 text-amber-200 border-amber-400/20";
-    return "bg-sky-500/15 text-sky-200 border-sky-400/20";
+        return "bg-amber-100 text-amber-900 border-amber-300/70 shadow-sm shadow-amber-200/40 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-400/20 dark:shadow-none";
+    return "bg-sky-100 text-sky-900 border-sky-300/70 shadow-sm shadow-sky-200/40 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-400/20 dark:shadow-none";
+};
+
+// --- Cute product mapping ---
+const kindOf = (o) => {
+    const name = `${o?.productName || ""} ${o?.title || ""}`.toLowerCase();
+    if (/(heart|❤|♡|💗|💖|💞)/i.test(name)) return "heart";
+    if (/(bot|add bot|via bot)/i.test(name)) return "bot";
+    if (/(member|vip|premium)/i.test(name)) return "member";
+    return "default";
+};
+
+const kindIcon = (k) => {
+    if (k === "heart") return Heart;
+    return Package;
+};
+
+const kindBadge = (k) => {
+    if (k === "heart")
+        return "bg-rose-500/15 border-rose-300/30 text-rose-700 dark:text-rose-200";
+    if (k === "bot")
+        return "bg-indigo-500/15 border-indigo-300/30 text-indigo-700 dark:text-indigo-200";
+    if (k === "member")
+        return "bg-amber-500/15 border-amber-300/30 text-amber-800 dark:text-amber-200";
+    return "bg-slate-500/10 border-slate-200/60 text-slate-700 dark:text-slate-200";
+};
+
+const kindGradient = (k) => {
+    if (k === "heart") return "from-rose-500 via-pink-500 to-red-500";
+    if (k === "bot") return "from-indigo-500 via-violet-500 to-fuchsia-500";
+    if (k === "member") return "from-amber-500 via-orange-500 to-rose-500";
+    return "from-sky-500 via-indigo-500 to-violet-500";
 };
 
 const progressOf = (o) => {
@@ -292,8 +325,23 @@ onMounted(loadAll);
                 class="text-left rounded-3xl p-5 border transition bg-white/70 dark:bg-slate-900/30 border-white/60 dark:border-white/10 shadow-xl shadow-slate-200/35 dark:shadow-none hover:translate-y-[-1px] active:translate-y-[0px]"
             >
                 <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2">
+                    <div class="min-w-0 flex items-start gap-3">
+                        <!-- cute icon bubble -->
+                        <div
+                            class="w-10 h-10 rounded-2xl border shrink-0 flex items-center justify-center shadow-sm"
+                            :class="[
+                                'bg-white/70 dark:bg-white/5 border-slate-200/60 dark:border-white/10',
+                                kindBadge(kindOf(o)),
+                            ]"
+                        >
+                            <component
+                                :is="kindIcon(kindOf(o))"
+                                class="w-5 h-5"
+                            />
+                        </div>
+
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
                             <span
                                 class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
                                 :class="statusBadge(o.status)"
@@ -302,45 +350,48 @@ onMounted(loadAll);
                             </span>
 
                             <span
+                                class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+                                :class="kindBadge(kindOf(o))"
+                            >
+                                {{ kindOf(o) === 'heart' ? 'Heart' : kindOf(o) === 'bot' ? 'Bot' : kindOf(o) === 'member' ? 'Member' : 'Order' }}
+                            </span>
+
+                            <span
                                 class="px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest border bg-white/60 dark:bg-white/5 border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-200"
                             >
                                 {{ (o.trackingCode || "").toUpperCase() }}
                             </span>
+                            </div>
+
+                            <h3
+                                class="mt-2 text-lg font-black tracking-tight text-slate-800 dark:text-white truncate"
+                            >
+                                {{ o.title || o.productName || "Pesanan" }}
+                            </h3>
+
+                            <p
+                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
+                            >
+                                Nama:
+                                <span
+                                    class="font-black text-slate-700 dark:text-slate-200"
+                                >
+                                    {{ o.customerName || "Customer" }}
+                                </span>
+                                <span
+                                    v-if="o.usernameAlias"
+                                    class="text-slate-400 font-bold"
+                                >
+                                    •
+                                </span>
+                                <span
+                                    v-if="o.usernameAlias"
+                                    class="font-black text-slate-600 dark:text-slate-300"
+                                >
+                                    {{ o.usernameAlias }}
+                                </span>
+                            </p>
                         </div>
-
-                        <h3
-                            class="mt-2 text-lg font-black tracking-tight text-slate-800 dark:text-white truncate"
-                        >
-                            {{ o.title || o.productName || "Pesanan" }}
-                        </h3>
-
-                        <p
-                            class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                        >
-                            Nama:
-                            <span
-                                class="font-black text-slate-700 dark:text-slate-200"
-                            >
-                                {{
-                                    o.customerName ||
-                                    o.customerAlias ||
-                                    o.customerMasked ||
-                                    "Customer"
-                                }}
-                            </span>
-                            <span
-                                v-if="o.usernameAlias"
-                                class="text-slate-400 font-bold"
-                            >
-                                •
-                            </span>
-                            <span
-                                v-if="o.usernameAlias"
-                                class="font-black text-slate-600 dark:text-slate-300"
-                            >
-                                {{ o.usernameAlias }}
-                            </span>
-                        </p>
                     </div>
 
                     <component
@@ -366,23 +417,54 @@ onMounted(loadAll);
                     </div>
 
                     <div
-                        class="h-3 rounded-full overflow-hidden border bg-slate-100/80 dark:bg-white/5 border-slate-200/60 dark:border-white/10"
+                        class="relative h-4 rounded-full overflow-hidden border bg-slate-100/80 dark:bg-white/5 border-slate-200/60 dark:border-white/10"
                     >
+                        <!-- dotted candy background -->
+                        <div class="absolute inset-0 opacity-[0.35] dark:opacity-[0.25] bg-[radial-gradient(circle_at_8px_8px,rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]"></div>
+
                         <div
-                            class="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-500 transition-all duration-700 ease-out"
+                            class="h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out relative overflow-hidden"
+                            :class="kindGradient(kindOf(o))"
                             :style="{ width: `${progressOf(o)}%` }"
-                        />
+                        >
+                            <div class="absolute inset-0 bg-white/25 w-full -translate-x-full animate-shine"></div>
+                        </div>
+
+                        <!-- tiny moving charm -->
+                        <div
+                            class="absolute top-1/2 -translate-y-1/2"
+                            :style="{ left: `calc(${progressOf(o)}% - 10px)` }"
+                        >
+                            <div class="w-6 h-6 rounded-2xl border bg-white/80 dark:bg-slate-950/30 border-slate-200/70 dark:border-white/10 shadow-sm flex items-center justify-center">
+                                <Heart v-if="kindOf(o) === 'heart'" class="w-4 h-4 text-rose-500" />
+                                <Sparkles v-else-if="kindOf(o) === 'bot'" class="w-4 h-4 text-amber-500" />
+                                <Package v-else class="w-4 h-4 text-indigo-500" />
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="mt-2 flex items-center justify-between">
-                        <p
-                            class="text-[11px] font-black text-slate-500 dark:text-slate-400"
-                        >
+                    <!-- mini meter -->
+                    <div class="mt-2 flex items-center gap-1.5">
+                        <component
+                            v-for="n in 5"
+                            :key="n"
+                            :is="kindOf(o) === 'heart' ? Heart : Sparkles"
+                            class="w-4 h-4"
+                            :class="
+                                progressOf(o) >= n * 20
+                                    ? (kindOf(o) === 'heart'
+                                          ? 'text-rose-500'
+                                          : (kindOf(o) === 'bot' ? 'text-amber-500' : 'text-indigo-500'))
+                                    : 'text-slate-300/70 dark:text-white/10'
+                            "
+                        />
+                        <span class="ml-1 text-[11px] font-black text-slate-500 dark:text-slate-400">
                             {{ Math.round(progressOf(o)) }}%
-                        </p>
-                        <p
-                            class="text-[11px] font-black text-slate-500 dark:text-slate-400"
-                        >
+                        </span>
+                    </div>
+
+                    <div class="mt-1 flex items-center justify-between">
+                        <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">
                             Update:
                             <span class="text-slate-700 dark:text-slate-200">
                                 {{ prettyDate(o.updatedAt) }}
@@ -392,6 +474,7 @@ onMounted(loadAll);
                                 {{ prettyTime(o.updatedAt) }}
                             </span>
                         </p>
+                        <ChevronRight class="w-4 h-4 opacity-40" />
                     </div>
                 </div>
             </button>
@@ -403,3 +486,14 @@ onMounted(loadAll);
         </p>
     </div>
 </template>
+
+<style scoped>
+@keyframes shine {
+    100% {
+        transform: translateX(100%);
+    }
+}
+.animate-shine {
+    animation: shine 2.2s infinite linear;
+}
+</style>

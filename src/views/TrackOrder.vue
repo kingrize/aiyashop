@@ -5,6 +5,7 @@ import {
   Search,
   Copy,
   Check,
+  Heart,
   Sparkles,
   Package,
   CalendarDays,
@@ -14,7 +15,7 @@ import {
 } from "lucide-vue-next";
 
 import { useDeliveryStore } from "../stores/delivery";
-import { formatRupiah } from "../utils/format";
+// NOTE: formatRupiah tidak dipakai di halaman tracking (biar ringan)
 
 const route = useRoute();
 const router = useRouter();
@@ -25,13 +26,45 @@ const copied = ref(false);
 const loading = ref(false);
 const errorMsg = ref("");
 
+// --- Cute product mapping ---
+const kindOf = (o) => {
+  const name = `${o?.productName || ""} ${o?.title || ""}`.toLowerCase();
+  if (/(heart|❤|♡|💗|💖|💞)/i.test(name)) return "heart";
+  if (/(bot|add bot|via bot)/i.test(name)) return "bot";
+  if (/(member|vip|premium)/i.test(name)) return "member";
+  return "default";
+};
+
+const kindIcon = (k) => {
+  if (k === "heart") return Heart;
+  if (k === "bot") return Sparkles;
+  return Package;
+};
+
+const kindBadge = (k) => {
+  if (k === "heart") return "bg-rose-500/15 border-rose-300/30 text-rose-700 dark:text-rose-200";
+  if (k === "bot") return "bg-indigo-500/15 border-indigo-300/30 text-indigo-700 dark:text-indigo-200";
+  if (k === "member") return "bg-amber-500/15 border-amber-300/30 text-amber-800 dark:text-amber-200";
+  return "bg-slate-500/10 border-slate-200/60 text-slate-700 dark:text-slate-200";
+};
+
+const kindGradient = (k) => {
+  if (k === "heart") return "from-rose-500 via-pink-500 to-red-500";
+  if (k === "bot") return "from-indigo-500 via-violet-500 to-fuchsia-500";
+  if (k === "member") return "from-amber-500 via-orange-500 to-rose-500";
+  return "from-sky-500 via-indigo-500 to-violet-500";
+};
+
 const codeParam = computed(() => String(route.params.code || "").trim());
 
 const statusBadge = (status) => {
   const s = String(status || "process").toLowerCase();
-  if (s === "done") return "bg-emerald-500/15 text-emerald-300 border-emerald-400/20";
-  if (s === "paused") return "bg-amber-500/15 text-amber-200 border-amber-400/20";
-  return "bg-sky-500/15 text-sky-200 border-sky-400/20";
+  // Pastikan kebaca di light & dark (sebelumnya terlalu nyaru di light)
+  if (s === "done")
+    return "bg-emerald-100 text-emerald-900 border-emerald-300/70 shadow-sm shadow-emerald-200/40 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/20 dark:shadow-none";
+  if (s === "paused")
+    return "bg-amber-100 text-amber-900 border-amber-300/70 shadow-sm shadow-amber-200/40 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-400/20 dark:shadow-none";
+  return "bg-sky-100 text-sky-900 border-sky-300/70 shadow-sm shadow-sky-200/40 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-400/20 dark:shadow-none";
 };
 
 const statusLabel = (status) => {
@@ -268,14 +301,31 @@ onMounted(() => {
               </span>
             </div>
 
-            <h2 class="mt-2 text-xl md:text-2xl font-black tracking-tight text-slate-800 dark:text-white truncate">
-              {{ delivery.publicOrder.title || delivery.publicOrder.productName || "Pesanan" }}
-            </h2>
+            <!-- Icon + judul (rapi): sejajar dengan baris pertama judul -->
+            <div class="mt-3 flex items-start gap-3">
+              <div
+                class="w-11 h-11 rounded-3xl border shadow-sm flex items-center justify-center shrink-0 mt-0.5
+                       bg-white/80 dark:bg-slate-950/25
+                       border-slate-200/70 dark:border-white/10"
+              >
+                <Heart v-if="kindOf(delivery.publicOrder) === 'heart'" class="w-6 h-6 text-rose-500" />
+                <Sparkles v-else-if="kindOf(delivery.publicOrder) === 'bot'" class="w-6 h-6 text-amber-500" />
+                <Package v-else class="w-6 h-6 text-indigo-500" />
+              </div>
+
+              <h2 class="text-xl md:text-2xl font-black tracking-tight text-slate-800 dark:text-white leading-tight pt-0.5">
+                {{ delivery.publicOrder.title || delivery.publicOrder.productName || "Pesanan" }}
+              </h2>
+            </div>
 
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Atas nama:
+              Nama:
               <span class="font-black text-slate-700 dark:text-slate-200">
-                {{ delivery.publicOrder.customerAlias || delivery.publicOrder.customerMasked || "Customer" }}
+                {{ delivery.publicOrder.customerName || "Customer" }}
+              </span>
+              <span v-if="delivery.publicOrder.usernameAlias" class="text-slate-400 font-bold"> • </span>
+              <span v-if="delivery.publicOrder.usernameAlias" class="font-black text-slate-600 dark:text-slate-300">
+                {{ delivery.publicOrder.usernameAlias }}
               </span>
             </p>
           </div>
@@ -307,23 +357,53 @@ onMounted(() => {
           </div>
 
           <div
-            class="h-3.5 rounded-full overflow-hidden border
+            class="relative h-4 rounded-full overflow-hidden border
                    bg-slate-100/80 dark:bg-white/5
                    border-slate-200/60 dark:border-white/10"
           >
+            <!-- dotted candy background -->
+            <div class="absolute inset-0 opacity-[0.35] dark:opacity-[0.25] bg-[radial-gradient(circle_at_8px_8px,rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]"></div>
+
             <div
-              class="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-500
+              class="h-full rounded-full bg-gradient-to-r
                      transition-all duration-700 ease-out relative overflow-hidden"
+              :class="kindGradient(kindOf(delivery.publicOrder))"
               :style="{ width: `${progress}%` }"
             >
               <div class="absolute inset-0 bg-white/25 w-full -translate-x-full animate-shine"></div>
             </div>
+
+            <!-- tiny moving charm -->
+            <div
+              class="absolute top-1/2 -translate-y-1/2"
+              :style="{ left: `calc(${progress}% - 10px)` }"
+            >
+              <div class="w-6 h-6 rounded-2xl border bg-white/80 dark:bg-slate-950/30 border-slate-200/70 dark:border-white/10 shadow-sm flex items-center justify-center">
+                <Heart v-if="kindOf(delivery.publicOrder) === 'heart'" class="w-4 h-4 text-rose-500" />
+                <Sparkles v-else class="w-4 h-4 text-indigo-500" />
+              </div>
+            </div>
           </div>
 
-          <div class="mt-2 flex items-center justify-between">
-            <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">
+          <!-- mini meter -->
+          <div class="mt-2 flex items-center gap-1.5">
+            <component
+              v-for="n in 5"
+              :key="n"
+              :is="kindOf(delivery.publicOrder) === 'heart' ? Heart : Sparkles"
+              class="w-4 h-4"
+              :class="
+                progress >= n * 20
+                  ? (kindOf(delivery.publicOrder) === 'heart' ? 'text-rose-500' : 'text-indigo-500')
+                  : 'text-slate-300/70 dark:text-white/10'
+              "
+            />
+            <span class="ml-1 text-[11px] font-black text-slate-500 dark:text-slate-400">
               {{ Math.round(progress) }}%
-            </p>
+            </span>
+          </div>
+
+          <div class="mt-1 flex items-center justify-between">
             <p class="text-[11px] font-black text-slate-500 dark:text-slate-400" v-if="remainingDays !== null">
               Estimasi: <span class="text-slate-700 dark:text-slate-200">{{ remainingDays }} hari lagi</span>
             </p>
@@ -391,8 +471,12 @@ onMounted(() => {
                   Dikirim hari ini
                 </p>
               </div>
-              <div class="shrink-0 px-3 py-1.5 rounded-full border
-                          bg-rose-500/15 text-rose-600 dark:text-rose-200 border-rose-300/30">
+              <div
+                class="shrink-0 px-3 py-1.5 rounded-full border flex items-center gap-1"
+                :class="kindBadge(kindOf(delivery.publicOrder))"
+              >
+                <Heart v-if="kindOf(delivery.publicOrder) === 'heart'" class="w-3.5 h-3.5" />
+                <Sparkles v-else class="w-3.5 h-3.5" />
                 <span class="text-xs font-black">+{{ log.amount }}</span>
               </div>
             </div>

@@ -1,7 +1,15 @@
 <script setup>
+import { nextTick } from "vue";
 import { useCartStore } from "../stores/cart";
 import { useUserStore } from "../stores/user"; // Import User Store
-import { Home, Sparkles, User, ShoppingBag, LogIn } from "lucide-vue-next";
+import {
+    Home,
+    Sparkles,
+    User,
+    ShoppingBag,
+    LogIn,
+    ClipboardList,
+} from "lucide-vue-next";
 import { useRouter, useRoute } from "vue-router";
 
 const cart = useCartStore();
@@ -9,29 +17,60 @@ const userStore = useUserStore();
 const router = useRouter();
 const route = useRoute();
 
-const navigate = (path, hash = "") => {
-    if (hash) {
-        if (route.path !== "/") {
-            router.push("/").then(() => {
-                setTimeout(() => {
-                    const el = document.getElementById(hash);
-                    if (el) el.scrollIntoView({ behavior: "smooth" });
-                }, 100);
-            });
-        } else {
-            const el = document.getElementById(hash);
-            if (el) el.scrollIntoView({ behavior: "smooth" });
+const scrollToId = async (id) => {
+    await nextTick();
+
+    let tries = 0;
+    const maxTries = 25; // ~1.25s
+    const tick = () => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "start" });
+            return;
         }
-    } else {
-        router.push(path);
+        tries++;
+        if (tries < maxTries) setTimeout(tick, 50);
+    };
+    tick();
+};
+
+const navigateHomeSection = async (id) => {
+    try {
+        // set hash biar highlight menu juga konsisten
+        if (route.path !== "/") {
+            await router.push({ path: "/", hash: `#${id}` });
+        } else {
+            if (route.hash !== `#${id}`) await router.replace({ hash: `#${id}` });
+        }
+
+        await scrollToId(id);
+    } catch (e) {
+        console.error("navigateHomeSection error:", e);
     }
 };
+
+const goHome = async () => {
+    try {
+        if (route.path !== "/") {
+            await router.push({ path: "/", hash: "" });
+        } else {
+            if (route.hash) await router.replace({ hash: "" });
+        }
+
+        // Scroll ke atas biar responsif
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+        console.error("goHome error:", e);
+    }
+};
+
+const navigate = (path) => router.push(path);
 
 // LOGIKA BARU UNTUK MEMBER TAB
 const handleMemberClick = () => {
     if (userStore.user) {
         // Jika SUDAH LOGIN: Scroll ke atas (Dashboard)
-        navigate("/", "home");
+        navigateHomeSection("home");
     } else {
         // Jika BELUM LOGIN: Buka Modal Login
         userStore.toggleAuthModal(true);
@@ -39,6 +78,9 @@ const handleMemberClick = () => {
 };
 
 const isActive = (path) => route.path === path;
+const isActiveHash = (hash) => route.path === "/" && route.hash === `#${hash}`;
+const isHomeActive = () => route.path === "/" && (!route.hash || route.hash === "#home");
+const isTrackActive = () => route.path.startsWith("/track");
 </script>
 
 <template>
@@ -47,13 +89,13 @@ const isActive = (path) => route.path === path;
     >
         <div class="flex justify-around items-center h-16 px-2">
             <button
-                @click="navigate('/')"
+                @click="goHome"
                 class="flex flex-col items-center gap-1 p-2 w-16 transition group"
             >
                 <Home
                     :size="22"
                     :class="
-                        isActive('/') && !route.hash
+                        isHomeActive()
                             ? 'text-sky-500 fill-sky-500/20'
                             : 'text-slate-400 dark:text-slate-500'
                     "
@@ -61,7 +103,7 @@ const isActive = (path) => route.path === path;
                 <span
                     class="text-[10px] font-bold"
                     :class="
-                        isActive('/') && !route.hash
+                        isHomeActive()
                             ? 'text-sky-500'
                             : 'text-slate-400 dark:text-slate-500'
                     "
@@ -70,16 +112,21 @@ const isActive = (path) => route.path === path;
             </button>
 
             <button
-                @click="navigate('/', 'services')"
+                @click="navigateHomeSection('services')"
                 class="flex flex-col items-center gap-1 p-2 w-16 transition group"
             >
                 <Sparkles
                     :size="22"
-                    class="text-slate-400 dark:text-slate-500 group-active:text-amber-400 group-active:scale-110 transition"
+                    :class="
+                        isActiveHash('services')
+                            ? 'text-amber-400'
+                            : 'text-slate-400 dark:text-slate-500'
+                    "
                 />
                 <span
                     class="text-[10px] font-bold text-slate-400 dark:text-slate-500"
-                    >Menu</span
+                    :class="isActiveHash('services') ? 'text-amber-500' : ''"
+                    >Jajan</span
                 >
             </button>
 
@@ -97,6 +144,30 @@ const isActive = (path) => route.path === path;
                     </span>
                 </button>
             </div>
+
+            <button
+                @click="navigate('/track/all')"
+                class="flex flex-col items-center gap-1 p-2 w-16 transition group"
+            >
+                <ClipboardList
+                    :size="22"
+                    :class="
+                        route.path.startsWith('/track')
+                            ? 'text-indigo-500'
+                            : 'text-slate-400 dark:text-slate-500'
+                    "
+                />
+                <span
+                    class="text-[10px] font-bold"
+                    :class="
+                        route.path.startsWith('/track')
+                            ? 'text-indigo-500'
+                            : 'text-slate-400 dark:text-slate-500'
+                    "
+                >
+                    Track
+                </span>
+            </button>
 
             <button
                 @click="handleMemberClick"

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, reactive } from "vue";
+import { ref, computed, onMounted, onUnmounted, reactive, nextTick } from "vue";
 import { useCartStore } from "../stores/cart";
 import { useUserStore } from "../stores/user";
 import { useThemeStore } from "../stores/theme";
@@ -16,9 +16,9 @@ import {
     User,
     X,
     Settings,
+    ClipboardList,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
-import { formatRupiah } from "../utils/format";
 
 const router = useRouter();
 const cart = useCartStore();
@@ -45,9 +45,40 @@ const handleScroll = () => {
 onMounted(() => window.addEventListener("scroll", handleScroll));
 onUnmounted(() => window.removeEventListener("scroll", handleScroll));
 
-const scrollToSection = (id) => {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth" });
+/**
+ * Scroll helper yang aman walau user sedang di halaman lain.
+ * - Jika bukan di beranda, pindah ke '/' dulu
+ * - Tunggu DOM siap, lalu scroll (retry beberapa kali biar ga miss)
+ */
+const goHomeAndScroll = async (id) => {
+    try {
+        if (router.currentRoute.value.path !== "/") {
+            await router.push({ path: "/" });
+        }
+
+        // Tunggu render HomeView
+        await nextTick();
+
+        let tries = 0;
+        const maxTries = 25; // ~1.25s
+        const tick = () => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "start" });
+                return;
+            }
+            tries++;
+            if (tries < maxTries) setTimeout(tick, 50);
+        };
+
+        tick();
+    } catch (e) {
+        console.error("goHomeAndScroll error:", e);
+    }
+};
+
+const goTrackAll = () => {
+    router.push("/track/all");
 };
 
 const memberName = computed(() => {
@@ -61,7 +92,8 @@ const memberName = computed(() => {
 // --- FUNGSI KE SETTINGS ---
 const goToSettings = () => {
     showProfileMenu.value = false;
-    router.push("/member/settings");
+    // route settings kamu ada di '/me'
+    router.push("/me");
 };
 
 // --- FUNGSI LOGOUT DENGAN KONFIRMASI IOS ---
@@ -96,6 +128,12 @@ const handleNavbarAuth = async () => {
 const openCart = () => {
     cart.toggleCart();
 };
+const formatRupiah = (val) =>
+    new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0,
+    }).format(val || 0);
 </script>
 
 <template>
@@ -112,7 +150,7 @@ const openCart = () => {
         >
             <button
                 class="flex items-center gap-3 focus:outline-none group text-left rounded-2xl p-1 -ml-1 transition"
-                @click="scrollToSection('home')"
+                @click="goHomeAndScroll('home')"
             >
                 <div
                     class="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl bg-gradient-to-br from-sky-400 via-cyan-400 to-emerald-300 shadow-md group-hover:scale-105 transition-transform duration-300"
@@ -146,15 +184,23 @@ const openCart = () => {
             >
                 <button
                     class="rounded-full px-4 py-2 hover:bg-sky-50 dark:hover:bg-white/5 hover:text-sky-500 transition"
-                    @click="scrollToSection('home')"
+                    @click="goHomeAndScroll('home')"
                 >
                     Beranda
                 </button>
                 <button
                     class="rounded-full px-4 py-2 hover:bg-sky-50 dark:hover:bg-white/5 hover:text-sky-500 transition"
-                    @click="scrollToSection('services')"
+                    @click="goHomeAndScroll('services')"
                 >
                     Menu Jajan
+                </button>
+
+                <button
+                    class="rounded-full px-4 py-2 hover:bg-sky-50 dark:hover:bg-white/5 hover:text-sky-500 transition flex items-center gap-2"
+                    @click="goTrackAll"
+                >
+                    <ClipboardList :size="16" class="text-slate-400 dark:text-slate-500" />
+                    Track Order
                 </button>
                 <div
                     class="h-5 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1"
