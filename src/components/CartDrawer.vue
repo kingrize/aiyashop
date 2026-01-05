@@ -41,7 +41,9 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatRupiah } from "../utils/format";
-const ManualPaymentModal = defineAsyncComponent(() => import("./ManualPaymentModal.vue"));
+const ManualPaymentModal = defineAsyncComponent(
+    () => import("./ManualPaymentModal.vue"),
+);
 
 const store = useCartStore();
 const promoStore = usePromoStore();
@@ -145,13 +147,12 @@ const handleCheckoutClick = () => {
         }
         showConfirmModal.value = true;
     } else {
-        // --- LOGIC BARU: MANUAL PAYMENT (QRIS) ---
-        const uniqueCode = Math.floor(Math.random() * 500) + 1;
-        const totalWithCode = finalTotalComputed.value + uniqueCode;
+        // QRIS / Manual payment: TANPA kode unik
+        const totalExact = finalTotalComputed.value;
         const orderId = `ORD-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 100)}`;
 
         manualPaymentData.value = {
-            total: totalWithCode,
+            total: totalExact,
             id: orderId,
         };
         showManualPayment.value = true;
@@ -304,7 +305,8 @@ const processCheckout = (statusBayar) => {
 
                     <div
                         v-else
-                        v-for="item in store.items" v-memo="[item.id, item.qty]"
+                        v-for="item in store.items"
+                        v-memo="[item.id, item.qty]"
                         :key="item.id"
                         class="bg-white dark:bg-graphite p-4 rounded-3xl border border-sky-50 dark:border-slate-700 shadow-sm flex gap-4 items-start group hover:shadow-md transition relative"
                     >
@@ -800,7 +802,9 @@ const processCheckout = (statusBayar) => {
 </template>
 
 <style scoped>
-.drawer-panel { will-change: transform; }
+.drawer-panel {
+    will-change: transform;
+}
 
 .fade-enter-active,
 .fade-leave-active {
