@@ -5,6 +5,7 @@ import { usePromoStore } from "../../stores/promo";
 import { useAnnouncementStore } from "../../stores/announcement";
 import { useRouter } from "vue-router";
 import ProductsPanel from "./ProductsPanel.vue";
+import DeliveriesPanel from "./DeliveriesPanel.vue";
 import { formatRupiah } from "../../utils/format";
 import {
     LayoutGrid,
@@ -25,6 +26,7 @@ import {
     Pencil,
     Save,
     RefreshCw,
+    ClipboardList,
 } from "lucide-vue-next";
 
 const userStore = useUserStore();
@@ -306,6 +308,17 @@ const deleteAnnouncement = (id) => {
                         "
                     >
                         <Package :size="20" /> Products
+                    </button>
+                    <button
+                        @click="activeTab = 'deliveries'"
+                        class="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-bold transition-all duration-300"
+                        :class="
+                            activeTab === 'deliveries'
+                                ? 'bg-indigo-50 dark:bg-white/10 text-indigo-600 dark:text-white'
+                                : 'text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5'
+                        "
+                    >
+                        <ClipboardList :size="20" /> Deliveries
                     </button>
                     <button
                         @click="activeTab = 'announce'"
@@ -854,6 +867,13 @@ const deleteAnnouncement = (id) => {
                 class="animate-in fade-in slide-in-from-bottom-4"
             >
                 <ProductsPanel />
+            </div>
+
+            <div
+                v-else-if="activeTab === 'deliveries'"
+                class="animate-in fade-in slide-in-from-bottom-4"
+            >
+                <DeliveriesPanel />
             </div>
 
             <div

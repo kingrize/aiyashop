@@ -38,9 +38,38 @@ const router = createRouter({
       meta: { requiresAuth: true, requiresAdmin: true },
     },
     {
+      path: "/track",
+      name: "track",
+      component: () => import("../views/TrackOrder.vue"),
+      meta: { title: "Lacak Pesanan - AiyaShop" },
+    },
+    {
+      path: "/track/:code",
+      name: "track-code",
+      component: () => import("../views/TrackOrder.vue"),
+      meta: { title: "Lacak Pesanan - AiyaShop" },
+    },
+    {
       path: "/:pathMatch(.*)*",
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
+    },
+    {
+      path: "/track",
+      name: "track",
+      component: () => import("../views/TrackOrder.vue"),
+    },
+
+    {
+      path: "/track/all",
+      name: "track-all",
+      component: () => import("../views/TrackAll.vue"),
+    },
+
+    {
+      path: "/track/:code",
+      name: "track-code",
+      component: () => import("../views/TrackOrder.vue"),
     },
   ],
   scrollBehavior(to, from, savedPosition) {
