@@ -23,6 +23,7 @@ const props = defineProps({
     isOpen: Boolean,
     totalPrice: Number,
     orderId: String,
+    buyerName: String,
 });
 
 const emit = defineEmits(["close"]);
@@ -215,9 +216,14 @@ const copyToClipboard = async (text, type) => {
 
 const openWhatsApp = () => {
     const method = activeTab.value === "qris" ? "Scan QRIS" : "Transfer Manual";
-    const message = `Halo Admin Aiya! 👋\n\nSaya mau konfirmasi pesanan:\n🆔 Order ID: *${props.orderId}*\n💰 Total: *${formatRupiah(
-        props.totalPrice,
-    )}*\nMetode: ${method}\n\nSudah saya bayar lunas kak! Mohon dicek. ✨`;
+    let message = `Halo Admin Aiya! 👋\n\nSaya mau konfirmasi pesanan:\n🆔 Order ID: *${props.orderId}*`;
+    
+    // Include buyer name if available
+    if (props.buyerName) {
+        message += `\n📝 Nama Pembeli: *${props.buyerName}*`;
+    }
+    
+    message += `\n💰 Total: *${formatRupiah(props.totalPrice)}*\nMetode: ${method}\n\nSudah saya bayar lunas kak! Mohon dicek. ✨`;
     const url = `https://wa.me/6285942963323?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
     emit("close");
@@ -282,6 +288,15 @@ const downloadQR = () => {
                             Order ID:
                             <span class="font-mono font-bold">{{
                                 orderId
+                            }}</span>
+                        </p>
+                        <p
+                            v-if="buyerName"
+                            class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate"
+                        >
+                            Pembeli:
+                            <span class="font-bold text-slate-700 dark:text-slate-200">{{
+                                buyerName
                             }}</span>
                         </p>
                     </div>

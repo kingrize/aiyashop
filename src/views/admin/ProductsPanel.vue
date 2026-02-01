@@ -677,19 +677,20 @@ const priceText = (p) => {
         </div>
 
         <!-- MODAL -->
-        <transition name="modal-bounce">
-            <div
-                v-if="showModal"
-                class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6"
-            >
+        <Teleport to="body">
+            <transition name="modal-bounce">
                 <div
-                    class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-                    @click="closeModal"
-                ></div>
-
-                <div
-                    class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-md rounded-[2.5rem] shadow-2xl border border-white/20 ring-1 ring-black/5 p-6 sm:p-8 flex flex-col"
+                    v-if="showModal"
+                    class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6"
                 >
+                    <div
+                        class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
+                        @click="closeModal"
+                    ></div>
+
+                    <div
+                        class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-white/20 ring-1 ring-black/5 p-5 sm:p-8 flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95"
+                    >
                     <div
                         class="flex items-center justify-between mb-8 sticky top-0 bg-inherit z-10 pb-2 border-b border-dashed border-slate-200 dark:border-white/10"
                     >
@@ -928,13 +929,13 @@ const priceText = (p) => {
                     >
                         <button
                             @click="closeModal"
-                            class="flex-1 py-4 rounded-2xl font-bold text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
+                            class="flex-1 py-4 min-h-[48px] rounded-2xl font-bold text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98]"
                         >
                             Cancel
                         </button>
                         <button
                             @click="save"
-                            class="flex-[2] py-4 rounded-2xl bg-slate-900 dark:bg-indigo-600 text-white font-bold text-sm shadow-xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                            class="flex-[2] py-4 min-h-[48px] rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm shadow-xl shadow-indigo-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                         >
                             <Check :size="18" stroke-width="3" /> Save Product
                         </button>
@@ -942,6 +943,7 @@ const priceText = (p) => {
                 </div>
             </div>
         </transition>
+        </Teleport>
     </div>
 </template>
 

@@ -12,6 +12,10 @@ import {
     CheckCircle2,
     Filter,
     Clock3,
+    PackageSearch,
+    ArrowRight,
+    CalendarDays,
+    User,
 } from "lucide-vue-next";
 import { useDeliveryStore } from "../stores/delivery";
 
@@ -25,14 +29,14 @@ const loading = ref(false);
 const filter = ref("all"); // all | process | paused | done
 
 const chipBase =
-    "px-3 py-2 rounded-full border text-xs font-black tracking-wide transition flex items-center gap-2";
+    "px-3.5 py-2.5 rounded-2xl border text-xs font-black tracking-wide transition-all duration-200 flex items-center gap-2 shadow-sm";
 const chipOff =
-    "bg-white/70 dark:bg-slate-950/20 border-slate-200/70 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-white/90 dark:hover:bg-white/5";
+    "bg-white/80 dark:bg-slate-900/40 border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800/60 hover:border-slate-300 dark:hover:border-white/20 hover:shadow-md";
 const chipOn = {
-    all: "bg-rose-500/15 border-rose-300/30 text-rose-700 dark:text-rose-200",
-    process: "bg-sky-500/15 border-sky-300/30 text-sky-700 dark:text-sky-200",
-    paused: "bg-amber-500/15 border-amber-300/30 text-amber-800 dark:text-amber-200",
-    done: "bg-emerald-500/15 border-emerald-300/30 text-emerald-800 dark:text-emerald-200",
+    all: "bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-200/50 dark:shadow-rose-900/30",
+    process: "bg-sky-500 border-sky-500 text-white shadow-lg shadow-sky-200/50 dark:shadow-sky-900/30",
+    paused: "bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-200/50 dark:shadow-amber-900/30",
+    done: "bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200/50 dark:shadow-emerald-900/30",
 };
 
 const statusLabel = (status) => {
@@ -51,12 +55,11 @@ const statusIcon = (status) => {
 
 const statusBadge = (status) => {
     const s = String(status || "process").toLowerCase();
-    // Pastikan kebaca di light & dark (sebelumnya terlalu nyaru di light)
     if (s === "done")
-        return "bg-emerald-100 text-emerald-900 border-emerald-300/70 shadow-sm shadow-emerald-200/40 dark:bg-emerald-500/15 dark:text-emerald-200 dark:border-emerald-400/20 dark:shadow-none";
+        return "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30";
     if (s === "paused")
-        return "bg-amber-100 text-amber-900 border-amber-300/70 shadow-sm shadow-amber-200/40 dark:bg-amber-500/15 dark:text-amber-200 dark:border-amber-400/20 dark:shadow-none";
-    return "bg-sky-100 text-sky-900 border-sky-300/70 shadow-sm shadow-sky-200/40 dark:bg-sky-500/15 dark:text-sky-200 dark:border-sky-400/20 dark:shadow-none";
+        return "bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30";
+    return "bg-sky-500/10 text-sky-700 border-sky-200 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/30";
 };
 
 // --- Cute product mapping ---
@@ -75,12 +78,12 @@ const kindIcon = (k) => {
 
 const kindBadge = (k) => {
     if (k === "heart")
-        return "bg-rose-500/15 border-rose-300/30 text-rose-700 dark:text-rose-200";
+        return "bg-rose-500/10 text-rose-600 border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30";
     if (k === "bot")
-        return "bg-indigo-500/15 border-indigo-300/30 text-indigo-700 dark:text-indigo-200";
+        return "bg-indigo-500/10 text-indigo-600 border-indigo-200 dark:bg-indigo-500/20 dark:text-indigo-300 dark:border-indigo-500/30";
     if (k === "member")
-        return "bg-amber-500/15 border-amber-300/30 text-amber-800 dark:text-amber-200";
-    return "bg-slate-500/10 border-slate-200/60 text-slate-700 dark:text-slate-200";
+        return "bg-amber-500/10 text-amber-600 border-amber-200 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/30";
+    return "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
 };
 
 const kindGradient = (k) => {
@@ -151,339 +154,274 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <div class="w-full max-w-5xl mx-auto px-4 py-6 md:py-10">
-        <!-- Header -->
-        <div
-            class="mb-6 md:mb-8 flex items-end justify-between gap-3 flex-wrap"
-        >
-            <div>
-                <div
-                    class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white/60 dark:bg-slate-900/25 border-white/60 dark:border-white/10 text-slate-700 dark:text-slate-200 shadow-sm"
-                >
-                    <Package class="w-4 h-4 text-indigo-400" />
-                    <span
-                        class="text-[11px] font-black tracking-widest uppercase"
-                        >Progress Publik</span
-                    >
-                </div>
-
-                <h1
-                    class="mt-3 text-2xl md:text-4xl font-black tracking-tight text-slate-800 dark:text-white"
-                >
-                    Daftar Pengiriman
-                </h1>
-                <p
-                    class="mt-1 text-sm md:text-base text-slate-500 dark:text-slate-400"
-                >
-                    Semua progress yang dipublikasikan admin. Urutan default:
-                    <span class="font-black text-slate-700 dark:text-slate-200"
-                        >paling baru</span
-                    >.
-                </p>
-            </div>
-
-            <button
-                @click="router.push({ name: 'track' })"
-                class="px-4 py-3 rounded-2xl font-black text-sm bg-rose-500 hover:bg-rose-600 text-white shadow-lg shadow-rose-200/60 dark:shadow-none transition active:scale-[0.98] flex items-center gap-2"
-            >
-                <Sparkles class="w-4 h-4" />
-                Cari Kode
-                <ChevronRight class="w-4 h-4 opacity-70" />
-            </button>
-        </div>
-
-        <!-- Search + Filters -->
-        <div
-            class="rounded-3xl p-4 md:p-5 border mb-6 bg-white/70 dark:bg-slate-900/30 border-white/60 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-none"
-        >
-            <div class="flex items-start justify-between gap-3 flex-wrap">
-                <div class="flex-1 min-w-[240px]">
-                    <label
-                        class="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                        >Pencarian</label
-                    >
-                    <div class="mt-2 relative">
-                        <input
-                            v-model="q"
-                            placeholder="Cari nama / produk / kode..."
-                            class="w-full px-4 py-3 rounded-2xl border bg-white/70 dark:bg-slate-950/20 border-slate-200/70 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-bold tracking-wide outline-none focus:ring-2 focus:ring-indigo-300/40"
-                        />
-                        <span
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+    <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+        <div class="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
+            <!-- Header Section -->
+            <header class="mb-8 md:mb-10">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div>
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border bg-white dark:bg-slate-900/60 border-slate-200/80 dark:border-white/10 text-slate-600 dark:text-slate-300 shadow-sm mb-4"
                         >
-                            <Search class="w-4 h-4" />
-                        </span>
-                    </div>
+                            <Package class="w-4 h-4 text-indigo-500" />
+                            <span class="text-[11px] font-black tracking-widest uppercase">
+                                Tracking / Progress
+                            </span>
+                        </div>
 
-                    <div
-                        class="mt-2 flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400"
-                    >
-                        <Clock3 class="w-4 h-4" />
-                        <span>Tips: pakai kode tracking biar cepat</span>
-                    </div>
-                </div>
-
-                <div class="min-w-[260px]">
-                    <div class="flex items-center gap-2">
-                        <Filter class="w-4 h-4 text-slate-400" />
-                        <p
-                            class="text-[10px] font-black uppercase tracking-widest text-slate-400"
-                        >
-                            Filter Lucu
+                        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                            Daftar Pengiriman
+                        </h1>
+                        <p class="mt-2 text-sm md:text-base text-slate-500 dark:text-slate-400 max-w-lg leading-relaxed">
+                            Pantau progress pesanan secara real-time. Semua order ditampilkan dari yang terbaru.
                         </p>
                     </div>
 
-                    <div class="mt-2 flex flex-wrap gap-2">
-                        <button
-                            @click="filter = 'all'"
-                            :class="[
-                                chipBase,
-                                filter === 'all' ? chipOn.all : chipOff,
-                            ]"
-                        >
-                            <Sparkles class="w-4 h-4 text-rose-400" />
-                            Semua
-                        </button>
-
-                        <button
-                            @click="filter = 'process'"
-                            :class="[
-                                chipBase,
-                                filter === 'process' ? chipOn.process : chipOff,
-                            ]"
-                        >
-                            <Flame class="w-4 h-4 text-sky-400" />
-                            Proses
-                        </button>
-
-                        <button
-                            @click="filter = 'paused'"
-                            :class="[
-                                chipBase,
-                                filter === 'paused' ? chipOn.paused : chipOff,
-                            ]"
-                        >
-                            <PauseCircle class="w-4 h-4 text-amber-400" />
-                            Pause
-                        </button>
-
-                        <button
-                            @click="filter = 'done'"
-                            :class="[
-                                chipBase,
-                                filter === 'done' ? chipOn.done : chipOff,
-                            ]"
-                        >
-                            <CheckCircle2 class="w-4 h-4 text-emerald-400" />
-                            Selesai
-                        </button>
-                    </div>
+                    <button
+                        @click="router.push({ name: 'track' })"
+                        class="shrink-0 px-5 py-3 rounded-2xl font-bold text-sm bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white shadow-lg shadow-rose-200/60 dark:shadow-rose-900/30 transition-all duration-200 active:scale-[0.98] flex items-center gap-2 group"
+                    >
+                        <Sparkles class="w-4 h-4" />
+                        Cari Kode
+                        <ArrowRight class="w-4 h-4 opacity-70 group-hover:translate-x-0.5 transition-transform" />
+                    </button>
                 </div>
-            </div>
-        </div>
+            </header>
 
-        <!-- List -->
-        <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Search + Filters Card -->
             <div
-                v-for="i in 6"
-                :key="i"
-                class="rounded-3xl p-5 border animate-pulse bg-white/60 dark:bg-slate-900/25 border-white/60 dark:border-white/10"
+                class="rounded-3xl p-5 md:p-6 border mb-8 bg-white dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none"
             >
-                <div
-                    class="h-4 w-40 bg-slate-200/70 dark:bg-white/10 rounded-lg"
-                ></div>
-                <div
-                    class="mt-3 h-3 w-full bg-slate-200/60 dark:bg-white/10 rounded-full"
-                ></div>
-                <div
-                    class="mt-2 h-3 w-2/3 bg-slate-200/60 dark:bg-white/10 rounded-full"
-                ></div>
-            </div>
-        </div>
-
-        <div
-            v-else-if="filtered.length === 0"
-            class="rounded-3xl p-6 border bg-white/60 dark:bg-slate-900/25 border-white/60 dark:border-white/10"
-        >
-            <p class="text-sm font-bold text-slate-600 dark:text-slate-300">
-                Belum ada progress publik, atau pencarian tidak ketemu.
-            </p>
-        </div>
-
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <button
-                v-for="o in filtered"
-                :key="o.trackingCode"
-                @click="
-                    router.push({
-                        name: 'track-code',
-                        params: {
-                            code: (o.trackingCode || '').toUpperCase(),
-                        },
-                    })
-                "
-                class="text-left rounded-3xl p-5 border transition bg-white/70 dark:bg-slate-900/30 border-white/60 dark:border-white/10 shadow-xl shadow-slate-200/35 dark:shadow-none hover:translate-y-[-1px] active:translate-y-[0px]"
-            >
-                <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0 flex items-start gap-3">
-                        <!-- cute icon bubble -->
-                        <div
-                            class="w-10 h-10 rounded-2xl border shrink-0 flex items-center justify-center shadow-sm"
-                            :class="[
-                                'bg-white/70 dark:bg-white/5 border-slate-200/60 dark:border-white/10',
-                                kindBadge(kindOf(o)),
-                            ]"
-                        >
-                            <component
-                                :is="kindIcon(kindOf(o))"
-                                class="w-5 h-5"
+                <div class="flex flex-col lg:flex-row lg:items-start gap-5">
+                    <!-- Search Input -->
+                    <div class="flex-1">
+                        <label class="text-[11px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5 mb-2">
+                            <Search class="w-3.5 h-3.5" />
+                            Pencarian
+                        </label>
+                        <div class="relative">
+                            <input
+                                v-model="q"
+                                placeholder="Cari nama / produk / kode tracking..."
+                                class="w-full px-4 py-3.5 rounded-2xl border bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 font-medium tracking-wide outline-none focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-900/50 focus:border-indigo-300 dark:focus:border-indigo-700 transition-all duration-200"
                             />
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Search class="w-5 h-5" />
+                            </span>
                         </div>
 
-                        <div class="min-w-0">
-                            <div class="flex items-center gap-2 flex-wrap">
-                            <span
-                                class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
-                                :class="statusBadge(o.status)"
-                            >
-                                {{ statusLabel(o.status) }}
-                            </span>
+                        <div class="mt-2.5 flex items-center gap-2 text-[11px] text-slate-400">
+                            <Clock3 class="w-4 h-4" />
+                            <span>Tips: Gunakan kode tracking untuk pencarian cepat</span>
+                        </div>
+                    </div>
 
-                            <span
-                                class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
-                                :class="kindBadge(kindOf(o))"
-                            >
-                                {{ kindOf(o) === 'heart' ? 'Heart' : kindOf(o) === 'bot' ? 'Bot' : kindOf(o) === 'member' ? 'Member' : 'Order' }}
-                            </span>
+                    <!-- Divider -->
+                    <div class="hidden lg:block w-px h-24 bg-slate-200 dark:bg-slate-700/50"></div>
 
-                            <span
-                                class="px-2.5 py-1 rounded-full text-[10px] font-black tracking-widest border bg-white/60 dark:bg-white/5 border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-200"
-                            >
-                                {{ (o.trackingCode || "").toUpperCase() }}
-                            </span>
-                            </div>
-
-                            <h3
-                                class="mt-2 text-lg font-black tracking-tight text-slate-800 dark:text-white truncate"
-                            >
-                                {{ o.title || o.productName || "Pesanan" }}
-                            </h3>
-
-                            <p
-                                class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-                            >
-                                Nama:
-                                <span
-                                    class="font-black text-slate-700 dark:text-slate-200"
-                                >
-                                    {{ o.customerName || "Customer" }}
-                                </span>
-                                <span
-                                    v-if="o.usernameAlias"
-                                    class="text-slate-400 font-bold"
-                                >
-                                    •
-                                </span>
-                                <span
-                                    v-if="o.usernameAlias"
-                                    class="font-black text-slate-600 dark:text-slate-300"
-                                >
-                                    {{ o.usernameAlias }}
-                                </span>
+                    <!-- Filter Chips -->
+                    <div class="lg:min-w-[280px]">
+                        <div class="flex items-center gap-2 mb-2">
+                            <Filter class="w-3.5 h-3.5 text-slate-400" />
+                            <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                                Filter Status
                             </p>
                         </div>
-                    </div>
 
-                    <component
-                        :is="statusIcon(o.status)"
-                        class="w-6 h-6 shrink-0 text-rose-400"
-                    />
-                </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                @click="filter = 'all'"
+                                :class="[chipBase, filter === 'all' ? chipOn.all : chipOff]"
+                            >
+                                <Sparkles class="w-4 h-4" />
+                                Semua
+                            </button>
 
-                <div class="mt-4">
-                    <div class="flex items-center justify-between mb-2">
-                        <p
-                            class="text-[11px] font-black tracking-widest uppercase text-slate-400"
-                        >
-                            Progress
-                        </p>
-                        <p
-                            class="text-xs font-black text-slate-700 dark:text-slate-200"
-                        >
-                            {{
-                                Number(o.deliveredTotal || o.delivered || 0)
-                            }}/{{ Number(o.totalTarget || o.total || 0) }}
-                        </p>
-                    </div>
+                            <button
+                                @click="filter = 'process'"
+                                :class="[chipBase, filter === 'process' ? chipOn.process : chipOff]"
+                            >
+                                <Flame class="w-4 h-4" />
+                                Proses
+                            </button>
 
-                    <div
-                        class="relative h-4 rounded-full overflow-hidden border bg-slate-100/80 dark:bg-white/5 border-slate-200/60 dark:border-white/10"
-                    >
-                        <!-- dotted candy background -->
-                        <div class="absolute inset-0 opacity-[0.35] dark:opacity-[0.25] bg-[radial-gradient(circle_at_8px_8px,rgba(255,255,255,0.9)_1px,transparent_1px)] [background-size:14px_14px]"></div>
+                            <button
+                                @click="filter = 'paused'"
+                                :class="[chipBase, filter === 'paused' ? chipOn.paused : chipOff]"
+                            >
+                                <PauseCircle class="w-4 h-4" />
+                                Pause
+                            </button>
 
-                        <div
-                            class="h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out relative overflow-hidden"
-                            :class="kindGradient(kindOf(o))"
-                            :style="{ width: `${progressOf(o)}%` }"
-                        >
-                            <div class="absolute inset-0 bg-white/25 w-full -translate-x-full animate-shine"></div>
+                            <button
+                                @click="filter = 'done'"
+                                :class="[chipBase, filter === 'done' ? chipOn.done : chipOff]"
+                            >
+                                <CheckCircle2 class="w-4 h-4" />
+                                Selesai
+                            </button>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <!-- tiny moving charm -->
-                        <div
-                            class="absolute top-1/2 -translate-y-1/2"
-                            :style="{ left: `calc(${progressOf(o)}% - 10px)` }"
-                        >
-                            <div class="w-6 h-6 rounded-2xl border bg-white/80 dark:bg-slate-950/30 border-slate-200/70 dark:border-white/10 shadow-sm flex items-center justify-center">
-                                <Heart v-if="kindOf(o) === 'heart'" class="w-4 h-4 text-rose-500" />
-                                <Sparkles v-else-if="kindOf(o) === 'bot'" class="w-4 h-4 text-amber-500" />
-                                <Package v-else class="w-4 h-4 text-indigo-500" />
+            <!-- Loading Skeleton -->
+            <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                    v-for="i in 6"
+                    :key="i"
+                    class="rounded-3xl p-5 border animate-pulse bg-white dark:bg-slate-900/40 border-slate-200/80 dark:border-white/10"
+                >
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 bg-slate-200 dark:bg-slate-700 rounded-2xl"></div>
+                        <div class="flex-1 space-y-2">
+                            <div class="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                            <div class="h-5 w-48 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                            <div class="h-3 w-32 bg-slate-100 dark:bg-slate-800 rounded-lg"></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 space-y-2">
+                        <div class="h-3 w-full bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                        <div class="h-2 w-2/3 bg-slate-100 dark:bg-slate-800 rounded-full"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div
+                v-else-if="filtered.length === 0"
+                class="rounded-3xl p-8 md:p-12 border bg-white dark:bg-slate-900/40 border-slate-200/80 dark:border-white/10 text-center"
+            >
+                <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                    <PackageSearch class="w-10 h-10 text-slate-400" />
+                </div>
+                <h3 class="text-lg font-bold text-slate-700 dark:text-slate-200 mb-2">
+                    Tidak Ada Data
+                </h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                    Belum ada progress yang dipublikasikan, atau pencarian tidak menemukan hasil.
+                </p>
+                <button
+                    v-if="q || filter !== 'all'"
+                    @click="q = ''; filter = 'all'"
+                    class="mt-4 px-4 py-2 rounded-xl text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
+                >
+                    Reset Filter
+                </button>
+            </div>
+
+            <!-- Tracking Cards Grid -->
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                    v-for="o in filtered"
+                    :key="o.trackingCode"
+                    @click="
+                        router.push({
+                            name: 'track-code',
+                            params: {
+                                code: (o.trackingCode || '').toUpperCase(),
+                            },
+                        })
+                    "
+                    class="group text-left rounded-3xl p-5 border transition-all duration-200 bg-white dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-none hover:border-slate-300 dark:hover:border-white/20 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.995]"
+                >
+                    <!-- Card Header -->
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="flex items-start gap-3 min-w-0">
+                            <!-- Icon Bubble -->
+                            <div
+                                class="w-12 h-12 rounded-2xl border shrink-0 flex items-center justify-center shadow-sm transition-transform duration-200 group-hover:scale-105"
+                                :class="kindBadge(kindOf(o))"
+                            >
+                                <component :is="kindIcon(kindOf(o))" class="w-5 h-5" />
+                            </div>
+
+                            <!-- Title & Meta -->
+                            <div class="min-w-0">
+                                <!-- Badges Row -->
+                                <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wide border"
+                                        :class="statusBadge(o.status)"
+                                    >
+                                        <component :is="statusIcon(o.status)" class="w-3 h-3" />
+                                        {{ statusLabel(o.status) }}
+                                    </span>
+
+                                    <span
+                                        class="px-2 py-0.5 rounded-lg text-[10px] font-mono font-bold tracking-wider border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+                                    >
+                                        {{ (o.trackingCode || "").toUpperCase() }}
+                                    </span>
+                                </div>
+
+                                <!-- Product Title -->
+                                <h3 class="text-base font-bold text-slate-800 dark:text-white truncate leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                    {{ o.title || o.productName || "Pesanan" }}
+                                </h3>
                             </div>
                         </div>
+
+                        <!-- Arrow Icon -->
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 opacity-50 group-hover:opacity-100 group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30 transition-all">
+                            <ChevronRight class="w-4 h-4 text-slate-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
+                        </div>
                     </div>
 
-                    <!-- mini meter -->
-                    <div class="mt-2 flex items-center gap-1.5">
-                        <component
-                            v-for="n in 5"
-                            :key="n"
-                            :is="kindOf(o) === 'heart' ? Heart : Sparkles"
-                            class="w-4 h-4"
-                            :class="
-                                progressOf(o) >= n * 20
-                                    ? (kindOf(o) === 'heart'
-                                          ? 'text-rose-500'
-                                          : (kindOf(o) === 'bot' ? 'text-amber-500' : 'text-indigo-500'))
-                                    : 'text-slate-300/70 dark:text-white/10'
-                            "
-                        />
-                        <span class="ml-1 text-[11px] font-black text-slate-500 dark:text-slate-400">
-                            {{ Math.round(progressOf(o)) }}%
+                    <!-- Customer Info -->
+                    <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 mb-4">
+                        <User class="w-4 h-4 shrink-0" />
+                        <span class="font-semibold text-slate-700 dark:text-slate-200">
+                            {{ o.customerName || "Customer" }}
+                        </span>
+                        <span v-if="o.usernameAlias" class="text-slate-300 dark:text-slate-600">•</span>
+                        <span v-if="o.usernameAlias" class="font-medium text-slate-500 dark:text-slate-400">
+                            {{ o.usernameAlias }}
                         </span>
                     </div>
 
-                    <div class="mt-1 flex items-center justify-between">
-                        <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">
-                            Update:
-                            <span class="text-slate-700 dark:text-slate-200">
-                                {{ prettyDate(o.updatedAt) }}
-                            </span>
-                            <span class="text-slate-400 font-bold">•</span>
-                            <span class="text-slate-700 dark:text-slate-200">
-                                {{ prettyTime(o.updatedAt) }}
-                            </span>
-                        </p>
-                        <ChevronRight class="w-4 h-4 opacity-40" />
-                    </div>
-                </div>
-            </button>
-        </div>
+                    <!-- Progress Section -->
+                    <div class="space-y-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                Progress
+                            </p>
+                            <p class="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                {{ Number(o.deliveredTotal || o.delivered || 0) }} / {{ Number(o.totalTarget || o.total || 0) }}
+                                <span class="text-slate-400 font-medium ml-1">({{ Math.round(progressOf(o)) }}%)</span>
+                            </p>
+                        </div>
 
-        <p class="mt-6 text-[11px] text-slate-500 dark:text-slate-400">
-            Halaman ini publik. Admin sebaiknya memakai <b>customerName</b> yang
-            aman ditampilkan, dan <b>usernameAlias</b> disamarkan (mis. ji***).
-        </p>
+                        <!-- Progress Bar -->
+                        <div class="relative h-2.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
+                            <div
+                                class="h-full rounded-full bg-gradient-to-r transition-all duration-700 ease-out"
+                                :class="kindGradient(kindOf(o))"
+                                :style="{ width: `${progressOf(o)}%` }"
+                            ></div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                        <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                            <CalendarDays class="w-3.5 h-3.5" />
+                            <span>{{ prettyDate(o.updatedAt) }}</span>
+                            <span class="mx-1">•</span>
+                            <span>{{ prettyTime(o.updatedAt) }}</span>
+                        </div>
+                        <span class="text-[11px] font-bold text-indigo-500 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                            Lihat Detail →
+                        </span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Footer Note -->
+            <p class="mt-8 text-center text-[11px] text-slate-400 max-w-lg mx-auto leading-relaxed">
+                Halaman ini bersifat publik. Admin menggunakan nama yang aman untuk ditampilkan.
+            </p>
+        </div>
     </div>
 </template>
 

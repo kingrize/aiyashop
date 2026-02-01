@@ -1,8 +1,9 @@
 <script setup>
-import { defineAsyncComponent, ref, computed, watch, reactive } from "vue";
+import { defineAsyncComponent, ref, computed, watch, reactive, nextTick } from "vue";
 import { useCartStore } from "../stores/cart";
 import { usePromoStore } from "../stores/promo";
 import { useUserStore } from "../stores/user";
+import { useBuyerNameStore } from "../stores/buyerName";
 import {
     ShoppingBag,
     X,
@@ -30,6 +31,7 @@ import {
     ShieldCheck,
     User,
     UserPlus,
+    UserCircle,
 } from "lucide-vue-next";
 import {
     doc,
@@ -48,6 +50,9 @@ const ManualPaymentModal = defineAsyncComponent(
 const store = useCartStore();
 const promoStore = usePromoStore();
 const userStore = useUserStore();
+const buyerNameStore = useBuyerNameStore();
+
+const buyerNameInputRef = ref(null);
 
 const promoInput = ref("");
 const promoMessage = ref("");
@@ -72,6 +77,17 @@ watch(
             selectedPayment.value = "member";
         }
     },
+);
+
+// Load buyer name from localStorage when drawer opens
+watch(
+    () => store.isOpen,
+    (isOpen) => {
+        if (isOpen) {
+            buyerNameStore.loadBuyerNameFromStorage();
+        }
+    },
+    { immediate: true },
 );
 
 const finalTotalComputed = computed(() =>
@@ -133,8 +149,16 @@ const handleAuthSubmit = async () => {
     }
 };
 
-const handleCheckoutClick = () => {
+const handleCheckoutClick = async () => {
     if (store.items.length === 0) return;
+
+    // Validate buyer name before any payment action
+    const nameValidation = buyerNameStore.validate();
+    if (!nameValidation.ok) {
+        await nextTick();
+        buyerNameInputRef.value?.focus();
+        return;
+    }
 
     if (selectedPayment.value === "member") {
         if (!userStore.user) {
@@ -154,6 +178,7 @@ const handleCheckoutClick = () => {
         manualPaymentData.value = {
             total: totalExact,
             id: orderId,
+            buyerName: buyerNameStore.trimmedName,
         };
         showManualPayment.value = true;
     }
@@ -183,6 +208,7 @@ const confirmMemberPayment = async () => {
                     title: "Pembelian Joki",
                     desc: summaryItems,
                     amount: total,
+                    buyerName: buyerNameStore.trimmedName,
                     createdAt: serverTimestamp(),
                     status: "success",
                 },
@@ -226,6 +252,12 @@ const processCheckout = (statusBayar) => {
         message += "✅ *Pembayaran LUNAS via Saldo Member*%0A";
         message +=
             "Mohon segera diproses ya min! Detail pesanan sudah masuk di sistem.";
+    }
+
+    // Include buyer name if available
+    const buyerName = buyerNameStore.trimmedName;
+    if (buyerName) {
+        message += `%0A📝 Nama Pembeli: *${encodeURIComponent(buyerName)}*`;
     }
 
     if (userStore.user) {
@@ -431,6 +463,50 @@ const processCheckout = (statusBayar) => {
                         >
                             <Sparkles v-if="!promoStore.error" :size="12" />
                             {{ promoMessage }}
+                        </p>
+                    </div>
+
+                    <!-- Buyer Name Input -->
+                    <div class="px-6 py-2">
+                        <label
+                            for="buyerNameInput"
+                            class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5"
+                        >
+                            <UserCircle :size="14" /> Your Name
+                        </label>
+                        <div class="relative group">
+                            <input
+                                id="buyerNameInput"
+                                ref="buyerNameInputRef"
+                                type="text"
+                                :value="buyerNameStore.buyerName"
+                                @input="buyerNameStore.setBuyerName($event.target.value)"
+                                placeholder="Enter your name"
+                                maxlength="50"
+                                class="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-4 transition font-medium text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                                :class="
+                                    buyerNameStore.buyerNameError
+                                        ? 'border-rose-300 dark:border-rose-600 focus:border-rose-400 focus:ring-rose-50 dark:focus:ring-rose-900/30'
+                                        : 'border-slate-200 dark:border-slate-600 focus:border-sky-300 focus:ring-sky-50 dark:focus:ring-slate-700'
+                                "
+                                aria-describedby="buyerNameHelper buyerNameError"
+                            />
+                        </div>
+                        <p
+                            v-if="buyerNameStore.buyerNameError"
+                            id="buyerNameError"
+                            class="text-[10px] mt-1.5 font-bold text-rose-500 flex items-center gap-1"
+                            role="alert"
+                        >
+                            <AlertCircle :size="12" />
+                            {{ buyerNameStore.buyerNameError }}
+                        </p>
+                        <p
+                            v-else
+                            id="buyerNameHelper"
+                            class="text-[10px] mt-1.5 text-slate-400 dark:text-slate-500"
+                        >
+                            This helps us process your order with minimal chat.
                         </p>
                     </div>
 
@@ -795,6 +871,7 @@ const processCheckout = (statusBayar) => {
                 :is-open="showManualPayment"
                 :total-price="manualPaymentData.total"
                 :order-id="manualPaymentData.id"
+                :buyer-name="manualPaymentData.buyerName"
                 @close="showManualPayment = false"
             />
         </Teleport>
