@@ -119,7 +119,7 @@ const handleTopUpProcess = () => {
             </div>
 
             <div
-                class="bg-white dark:bg-slate-800 rounded-[2rem] p-6 md:p-8 shadow-xl border border-slate-100 dark:border-slate-700 relative overflow-hidden"
+                class="bg-white/70 dark:bg-slate-900/30 backdrop-blur-md rounded-[2rem] p-6 md:p-8 shadow-xl shadow-slate-200/40 dark:shadow-none border border-white/60 dark:border-white/10 relative overflow-hidden"
             >
                 <div
                     class="absolute top-0 right-0 w-64 h-64 bg-indigo-50 dark:bg-indigo-900/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2 pointer-events-none"
@@ -141,7 +141,7 @@ const handleTopUpProcess = () => {
                             type="number"
                             v-model="amount"
                             placeholder="0"
-                            class="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition"
+                            class="w-full pl-14 pr-6 py-5 bg-white/70 dark:bg-slate-900/30 border-2 border-slate-200 dark:border-slate-700 rounded-2xl text-2xl font-black text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
                         />
                     </div>
 
@@ -218,7 +218,7 @@ const handleTopUpProcess = () => {
 
                 <button
                     @click="handleTopUpProcess"
-                    class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 text-lg"
+                    class="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-lg btn-bouncy"
                 >
                     Lanjut ke WhatsApp <ArrowRight :size="20" />
                 </button>

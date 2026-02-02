@@ -63,14 +63,14 @@ const router = useRouter();
             <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <button
                     @click="router.back()"
-                    class="px-6 py-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center justify-center gap-2"
+                    class="btn-secondary"
                 >
                     <ArrowLeft :size="20" /> Balik Aja
                 </button>
 
                 <button
                     @click="router.push('/')"
-                    class="px-6 py-3.5 rounded-xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition flex items-center justify-center gap-2 btn-bouncy"
+                    class="btn-primary btn-bouncy"
                 >
                     <Home :size="20" /> Pulang ke Home
                 </button>

@@ -89,7 +89,7 @@ const handleTopUpProcess = () => {
             ></div>
 
             <div
-                class="bg-white dark:bg-charcoal w-full max-w-md rounded-[2rem] shadow-2xl relative z-10 animate-in zoom-in-95 duration-200 border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh]"
+                class="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md w-full max-w-md rounded-[2rem] shadow-2xl relative z-10 animate-in zoom-in-95 duration-200 border border-white/60 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh]"
             >
                 <div
                     class="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center"

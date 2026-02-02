@@ -196,7 +196,7 @@ onMounted(() => {
                        border-slate-200/70 dark:border-white/10
                        text-slate-800 dark:text-white
                        placeholder:text-slate-400 dark:placeholder:text-slate-500
-                       font-bold tracking-wide outline-none focus:ring-2 focus:ring-rose-300/40"
+                       font-bold tracking-wide outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400"
               />
               <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                 <Search class="w-4 h-4" />

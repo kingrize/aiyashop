@@ -73,7 +73,7 @@ const handleJoin = () => {
                     ></div>
 
                     <div
-                        class="relative bg-white dark:bg-slate-800 rounded-[2rem] p-8 shadow-xl dark:shadow-none border border-slate-100 dark:border-slate-700 overflow-hidden text-center transition-colors duration-300"
+                        class="relative bg-white/70 dark:bg-slate-900/30 backdrop-blur-md rounded-[2rem] p-8 shadow-xl shadow-slate-200/40 dark:shadow-none border border-white/60 dark:border-white/10 overflow-hidden text-center transition-colors duration-300"
                     >
                         <div
                             class="w-24 h-24 bg-gradient-to-br from-amber-300 to-orange-400 rounded-full mx-auto flex items-center justify-center shadow-lg mb-6 animate-pulse"
