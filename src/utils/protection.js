@@ -57,13 +57,13 @@ export function enableProtection() {
     // Jika di production (bukan localhost), aktifkan debugger trap
     if (!isLocal) {
         // Teknik 1: Function constructor debugger
-        setInterval(() => {
-            (function () {
-                return false;
-            })
-            ['constructor']('debugger')
-                .call();
-        }, 1000);
+        // setInterval(() => {
+        //     (function () {
+        //         return false;
+        //     })
+        //     ['constructor']('debugger')
+        //         .call();
+        // }, 1000);
 
         // Teknik 2: Timing attack (opsional, bisa false positive di HP kentang)
         /*
