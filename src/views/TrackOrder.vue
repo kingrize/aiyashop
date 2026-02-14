@@ -152,6 +152,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <div class="min-h-screen bg-gradient-to-b from-cream via-amber-50/20 to-cream dark:from-charcoal dark:via-slate-900 dark:to-charcoal">
   <div class="w-full max-w-3xl mx-auto px-4 py-6 md:py-10">
     <!-- Header -->
     <div class="mb-6 md:mb-8">
@@ -502,6 +503,7 @@ onMounted(() => {
         </p>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

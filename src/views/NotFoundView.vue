@@ -27,6 +27,11 @@ const router = useRouter();
             <div
                 class="absolute bottom-1/4 left-1/3 w-6 h-6 bg-indigo-200 dark:bg-indigo-900 rounded-full blur-md animate-pulse delay-700"
             ></div>
+            <!-- Extra playful decorations -->
+            <span class="absolute top-16 right-[12%] text-rose-200/25 dark:text-rose-500/5 text-2xl animate-float-slow" style="animation-delay: 0.5s">❤️</span>
+            <span class="absolute top-1/2 left-[8%] text-amber-200/20 dark:text-amber-500/5 text-xl animate-float-delayed" style="animation-delay: 1.2s">✨</span>
+            <span class="absolute bottom-1/3 right-[18%] text-sky-200/15 dark:text-sky-500/5 text-lg animate-float-slow" style="animation-delay: 2s">⭐</span>
+            <span class="absolute top-1/4 left-[25%] text-purple-200/15 dark:text-purple-500/5 text-2xl animate-float-delayed" style="animation-delay: 0.8s">💫</span>
         </div>
 
         <div

@@ -154,8 +154,16 @@ onMounted(loadAll);
 </script>
 
 <template>
-    <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
-        <div class="w-full max-w-5xl mx-auto px-4 py-8 md:py-12">
+    <div class="min-h-screen bg-gradient-to-b from-cream via-amber-50/20 to-cream dark:from-charcoal dark:via-slate-900 dark:to-charcoal relative overflow-hidden">
+        <!-- Floating decorations -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden">
+            <span class="absolute top-20 right-[8%] text-rose-200/15 dark:text-rose-500/5 text-2xl animate-float-slow">❤️</span>
+            <span class="absolute top-1/3 left-[5%] text-sky-200/15 dark:text-white/5 text-xl animate-float-fast" style="animation-delay: 1.2s">☁️</span>
+            <span class="absolute bottom-32 right-[12%] text-amber-200/20 dark:text-amber-500/5 text-lg animate-float-slow" style="animation-delay: 0.5s">✨</span>
+            <span class="absolute bottom-20 left-[10%] text-indigo-200/10 dark:text-indigo-500/5 text-xl animate-float-fast" style="animation-delay: 2s">⭐</span>
+        </div>
+
+        <div class="w-full max-w-5xl mx-auto px-4 py-8 md:py-12 relative z-10">
             <!-- Header Section -->
             <header class="mb-8 md:mb-10">
                 <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -190,7 +198,7 @@ onMounted(loadAll);
 
             <!-- Search + Filters Card -->
             <div
-                class="rounded-3xl p-5 md:p-6 border mb-8 bg-white dark:bg-slate-900/50 border-slate-200/80 dark:border-white/10 shadow-xl shadow-slate-200/50 dark:shadow-none"
+                class="rounded-3xl p-5 md:p-6 border mb-8 bg-white/70 dark:bg-slate-900/50 border-white/60 dark:border-white/10 shadow-xl shadow-slate-200/40 dark:shadow-none backdrop-blur-sm"
             >
                 <div class="flex flex-col lg:flex-row lg:items-start gap-5">
                     <!-- Search Input -->

@@ -11,23 +11,25 @@ const router = createRouter({
       path: "/",
       name: "home",
       component: HomeView,
+      meta: { title: "AiyaShop — Jasa Joki Sky Terpercaya" },
     },
     {
       path: "/join",
       name: "join",
       component: () => import("../views/JoinMemberView.vue"),
+      meta: { title: "Join Member Premium - AiyaShop" },
     },
     {
       path: "/top-up",
       name: "top-up",
       component: () => import("../views/TopUpView.vue"),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: "Isi Saldo Member - AiyaShop" },
     },
     {
       path: "/me",
       name: "member-settings",
       component: () => import("../views/member/MemberSettings.vue"),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: "Pengaturan Akun - AiyaShop" },
     },
     {
       path: "/admin",
@@ -35,7 +37,7 @@ const router = createRouter({
       // OPTIMASI: Lazy Load (Code Splitting)
       // Kode admin hanya di-download saat user membuka halaman admin
       component: () => import("../views/admin/AdminDashboard.vue"),
-      meta: { requiresAuth: true, requiresAdmin: true },
+      meta: { requiresAuth: true, requiresAdmin: true, title: "Admin Dashboard - AiyaShop" },
     },
 
     // --- TRACKING ROUTES (REFACTORED) ---
@@ -71,6 +73,7 @@ const router = createRouter({
       path: "/:pathMatch(.*)*",
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
+      meta: { title: "404 — Halaman Tidak Ditemukan" },
     },
   ],
   scrollBehavior(to, from, savedPosition) {
@@ -106,6 +109,11 @@ router.beforeEach(async (to, from, next) => {
   } else {
     next();
   }
+});
+
+// SEO: Dynamically set page title from route meta
+router.afterEach((to) => {
+  document.title = to.meta.title || 'AiyaShop — Jasa Joki Sky Terpercaya';
 });
 
 export default router;

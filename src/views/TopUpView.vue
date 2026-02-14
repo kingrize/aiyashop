@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive } from "vue";
 import { useUserStore } from "../stores/user";
+import { useToastStore } from "../stores/toast";
 import { useRouter } from "vue-router";
 import { formatRupiah } from "../utils/format";
 import {
@@ -17,6 +18,7 @@ import {
 } from "lucide-vue-next";
 
 const userStore = useUserStore();
+const toastStore = useToastStore();
 const router = useRouter();
 
 // State
@@ -65,7 +67,7 @@ const selectAmount = (val) => {
 
 const handleTopUpProcess = () => {
     if (!amount.value || amount.value < 10000) {
-        alert("Minimal Top Up Rp 10.000 ya kak! 😊");
+        toastStore.trigger("Minimal Top Up Rp 10.000 ya kak! 😊", "warning");
         return;
     }
 

@@ -11,8 +11,10 @@ import {
     Star,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
+import { ref } from "vue";
 
 const router = useRouter();
+const isJoining = ref(false);
 
 // DATA BENEFIT BARU
 const benefits = [
@@ -49,16 +51,26 @@ const benefits = [
 ];
 
 const handleJoin = () => {
+    isJoining.value = true;
     const text = `Halo Admin Aiya! 👋%0A%0ASaya mau daftar *Member Premium* dong! Tolong infokan cara pembayarannya ya (25K). ✨`;
     window.open(`https://wa.me/6285942963323?text=${text}`, "_blank");
+    setTimeout(() => { isJoining.value = false; }, 2000);
 };
 </script>
 
 <template>
     <div
-        class="min-h-screen bg-cream dark:bg-charcoal pt-24 pb-20 px-6 transition-colors duration-300"
+        class="min-h-screen bg-cream dark:bg-charcoal pt-24 pb-20 px-6 transition-colors duration-300 relative overflow-hidden"
     >
-        <div class="max-w-4xl mx-auto">
+        <!-- Floating decorations -->
+        <div class="absolute inset-0 pointer-events-none overflow-hidden">
+            <span class="absolute top-16 right-[10%] text-rose-200/20 dark:text-rose-500/5 text-3xl animate-float-slow">❤️</span>
+            <span class="absolute top-1/3 left-[5%] text-sky-200/15 dark:text-white/5 text-2xl animate-float-fast" style="animation-delay: 1.5s">☁️</span>
+            <span class="absolute bottom-32 right-[15%] text-amber-200/20 dark:text-amber-500/5 text-xl animate-float-slow" style="animation-delay: 0.8s">✨</span>
+            <span class="absolute bottom-20 left-[12%] text-indigo-200/15 dark:text-indigo-500/5 text-lg animate-float-fast" style="animation-delay: 2s">⭐</span>
+        </div>
+
+        <div class="max-w-4xl mx-auto relative z-10">
             <button
                 @click="router.push('/')"
                 class="flex items-center gap-2 text-slate-400 hover:text-sky-500 dark:text-slate-300 dark:hover:text-sky-400 transition mb-8 font-bold text-sm"
@@ -116,9 +128,19 @@ const handleJoin = () => {
 
                         <button
                             @click="handleJoin"
-                            class="w-full btn-bouncy bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all"
+                            :disabled="isJoining"
+                            class="w-full btn-bouncy bg-indigo-600 text-white py-4 rounded-xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-70"
                         >
-                            <MessageCircle :size="20" /> Join Sekarang
+                            <template v-if="isJoining">
+                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Menghubungkan...
+                            </template>
+                            <template v-else>
+                                <MessageCircle :size="20" /> Join Sekarang
+                            </template>
                         </button>
 
                         <p
@@ -183,3 +205,16 @@ const handleJoin = () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+.animate-float-slow {
+    animation: float 8s ease-in-out infinite;
+}
+.animate-float-fast {
+    animation: float 5s ease-in-out infinite;
+}
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+</style>

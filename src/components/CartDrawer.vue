@@ -5,6 +5,7 @@ import { usePromoStore } from "../stores/promo";
 import { useUserStore } from "../stores/user";
 import { useBuyerNameStore } from "../stores/buyerName";
 import { useOrderStore } from "../stores/order";
+import { useToastStore } from "../stores/toast";
 import {
     ShoppingBag,
     X,
@@ -53,6 +54,7 @@ const promoStore = usePromoStore();
 const userStore = useUserStore();
 const buyerNameStore = useBuyerNameStore();
 const orderStore = useOrderStore();
+const toastStore = useToastStore();
 
 // Track current order for checkout flow
 const currentOrderId = ref(null);
@@ -149,7 +151,7 @@ const handleAuthSubmit = async () => {
             throw new Error("Username & Password wajib!");
         await userStore.login(authForm.username, authForm.password);
     } catch (e) {
-        alert(e.message || "Gagal login");
+        toastStore.trigger(e.message || "Gagal login", "error");
     } finally {
         isAuthLoading.value = false;
     }
@@ -177,11 +179,11 @@ const handleCheckoutClick = async () => {
     if (selectedPayment.value === "member") {
         // STEP A0: Preflight Checks
         if (!userStore.user) {
-            alert("Silakan login dulu ya kak! 😊");
+            toastStore.trigger("Silakan login dulu ya kak! 😊", "warning");
             return;
         }
         if (userStore.memberData?.saldo < finalTotalComputed.value) {
-            alert("Yah, saldo member kakak kurang nih 🥺 Topup dulu yuk!");
+            toastStore.trigger("Yah, saldo member kakak kurang nih 🥺 Topup dulu yuk!", "warning");
             return;
         }
         
@@ -287,7 +289,7 @@ const confirmMemberPayment = async () => {
         // This catch block is ONLY for Step A2 (Financial Commit) failure.
         // If money wasn't deducted, we can safely show error.
         console.error("Payment failed:", error);
-        alert(`Gagal memproses pembayaran: ${error.message}`);
+        toastStore.trigger(`Gagal memproses pembayaran: ${error.message}`, "error");
     } finally {
         isProcessingPayment.value = false;
     }

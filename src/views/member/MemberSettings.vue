@@ -134,7 +134,7 @@ const handleLogout = async () => {
 
 <template>
     <div
-        class="min-h-screen bg-[#F2F2F7] dark:bg-black pt-24 pb-20 px-4 md:px-6 transition-colors duration-300"
+        class="min-h-screen bg-cream dark:bg-charcoal pt-24 pb-20 px-4 md:px-6 transition-colors duration-300"
     >
         <div class="max-w-md mx-auto space-y-6">
             <div class="flex items-center gap-4">
