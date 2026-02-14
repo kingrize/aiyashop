@@ -21,11 +21,13 @@ export function enableProtection() {
         console.info = () => { };
     }
 
-    // 1. Disable Klik Kanan
+    // 1. Disable Klik Kanan (Di-nonaktifkan agar user bisa klik kanan)
+    /*
     document.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         return false;
     });
+    */
 
     // 2. Disable Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
