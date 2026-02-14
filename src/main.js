@@ -1,6 +1,7 @@
 // LOKASI FILE: src/main.js
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { enableProtection } from './utils/protection' // Import Security
 import './assets/main.css'
 import App from './App.vue'
 import router from './router'
@@ -20,5 +21,8 @@ userStore.initAuth();
 // Inisialisasi Tema
 const themeStore = useThemeStore();
 themeStore.initTheme();
+
+// Aktifkan Proteksi (Anti-Debug & Anti-Copy)
+enableProtection();
 
 app.mount('#app')

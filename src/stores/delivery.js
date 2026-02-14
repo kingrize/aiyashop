@@ -482,13 +482,22 @@ export const useDeliveryStore = defineStore("delivery", {
 
             const deliveredTotal = sumLogs(logs);
 
+            // Auto-finish logic: Jika progress >= total, otomatis status = done
+            const total = safeNumber(current.total ?? current.totalTarget);
+            let newStatus = current.status;
+
+            if (deliveredTotal >= total && normalizeStatus(newStatus) !== 'done') {
+                newStatus = 'done';
+            }
+
             await updateDoc(ref, {
                 logs,
                 deliveredTotal,
+                status: newStatus,
                 updatedAt: serverTimestamp(),
             });
 
-            await this._syncToPublic({ ...current, logs, deliveredTotal }, { merge: true });
+            await this._syncToPublic({ ...current, logs, deliveredTotal, status: newStatus }, { merge: true });
 
             // update local
             const idx = this.items.findIndex((x) => x.id === id);
@@ -497,6 +506,7 @@ export const useDeliveryStore = defineStore("delivery", {
                     ...this.items[idx],
                     logs,
                     deliveredTotal,
+                    status: newStatus,
                 };
             }
 
