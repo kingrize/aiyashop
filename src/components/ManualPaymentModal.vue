@@ -24,6 +24,7 @@ const props = defineProps({
     totalPrice: Number,
     orderId: String,
     buyerName: String,
+    cartItems: Array,
 });
 
 const emit = defineEmits(["close"]);
@@ -222,8 +223,16 @@ const openWhatsApp = () => {
     if (props.buyerName) {
         message += `\n📝 Nama Pembeli: *${props.buyerName}*`;
     }
+
+    // Include detailed product list
+    if (props.cartItems && props.cartItems.length > 0) {
+        message += `\n\n🔖 *Detail Pesanan:*`;
+        props.cartItems.forEach((item, index) => {
+            message += `\n${index + 1}. ${item.name} (${item.qty}x) - ${formatRupiah(item.price * item.qty)}`;
+        });
+    }
     
-    message += `\n💰 Total: *${formatRupiah(props.totalPrice)}*\nMetode: ${method}\n\nSudah saya bayar lunas kak! Mohon dicek. ✨`;
+    message += `\n\n💰 Total: *${formatRupiah(props.totalPrice)}*\nMetode: ${method}\n\nSudah saya bayar lunas kak! Mohon dicek. ✨`;
     const url = `https://wa.me/6285942963323?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
     emit("close");

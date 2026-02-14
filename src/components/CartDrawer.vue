@@ -993,6 +993,7 @@ const processCheckout = (statusBayar, orderShortId = null) => {
                 :total-price="manualPaymentData.total"
                 :order-id="manualPaymentData.id"
                 :buyer-name="manualPaymentData.buyerName"
+                :cart-items="store.items"
                 @close="showManualPayment = false"
             />
         </Teleport>
