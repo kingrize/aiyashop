@@ -26,6 +26,16 @@ import {
 const deliveryStore = useDeliveryStore();
 const toast = useToastStore();
 
+// Contact platform options with display labels and placeholders
+const CONTACT_PLATFORMS = [
+    { value: "whatsapp", label: "WhatsApp", placeholder: "e.g. +628123456789" },
+    { value: "instagram", label: "Instagram", placeholder: "e.g. @username" },
+    { value: "tiktok", label: "TikTok", placeholder: "e.g. @username" },
+    { value: "x", label: "X (Twitter)", placeholder: "e.g. @handle" },
+    { value: "in_game", label: "In-Game (Sky COTL)", placeholder: "Sky username" },
+    { value: "other", label: "Other", placeholder: "Contact info" },
+];
+
 const getTrackingUrl = (code) => {
     const origin = window.location.origin;
     return `${origin}/track/${code}`;
@@ -59,7 +69,8 @@ const todayJakarta = () => {
 
 const createForm = ref({
     customerName: "",
-    account: "",
+    contactPlatform: "in_game",
+    contactIdentifier: "",
     product: "Heart",
     total: 50,
     perDay: 10,
@@ -71,7 +82,8 @@ const createForm = ref({
 const editForm = ref({
     id: "",
     customerName: "",
-    account: "",
+    contactPlatform: "in_game",
+    contactIdentifier: "",
     product: "Heart",
     total: 0,
     perDay: 10,
@@ -79,6 +91,14 @@ const editForm = ref({
     notes: "",
     status: "ongoing",
 });
+
+// Computed properties for dynamic placeholders
+const createPlatformInfo = computed(() =>
+    CONTACT_PLATFORMS.find(p => p.value === createForm.value.contactPlatform) || CONTACT_PLATFORMS[4]
+);
+const editPlatformInfo = computed(() =>
+    CONTACT_PLATFORMS.find(p => p.value === editForm.value.contactPlatform) || CONTACT_PLATFORMS[4]
+);
 
 const logForm = ref({
     id: "",
@@ -128,7 +148,8 @@ const statusLabel = (s) => {
 const resetCreate = () => {
     createForm.value = {
         customerName: "",
-        account: "",
+        contactPlatform: "in_game",
+        contactIdentifier: "",
         product: "Heart",
         total: 50,
         perDay: 10,
@@ -153,7 +174,8 @@ const openEdit = (item) => {
     editForm.value = {
         id: item.id,
         customerName: item.customerName || "",
-        account: item.account || "",
+        contactPlatform: item.contactPlatform || "in_game",
+        contactIdentifier: item.contactIdentifier || item.account || "",
         product: item.product || "Heart",
         total: Number(item.total || 0),
         perDay: Number(item.perDay || 10),
@@ -205,8 +227,9 @@ const handleLogSave = async () => {
 };
 
 const handleDelete = async (item) => {
+    const displayName = item.contactIdentifier || item.account || "unknown";
     const ok = window.confirm(
-        `Hapus tracker untuk ${item.customerName} (${item.account})?`,
+        `Hapus tracker untuk ${item.customerName} (${displayName})?`,
     );
     if (!ok) return;
     try {
@@ -313,11 +336,21 @@ onMounted(async () => {
                 </div>
 
                 <div>
-                    <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">Akun / Username</label>
-                    <input
-                        v-model="createForm.account"
+                    <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">Platform Kontak</label>
+                    <select
+                        v-model="createForm.contactPlatform"
                         class="mt-1 w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
-                        placeholder="mis. jiya_sky"
+                    >
+                        <option v-for="p in CONTACT_PLATFORMS" :key="p.value" :value="p.value">{{ p.label }}</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">{{ createPlatformInfo.label }}</label>
+                    <input
+                        v-model="createForm.contactIdentifier"
+                        class="mt-1 w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                        :placeholder="createPlatformInfo.placeholder"
                     />
                 </div>
 
@@ -425,7 +458,15 @@ onMounted(async () => {
                             <div class="flex flex-wrap items-center gap-2 mt-1.5">
                                 <span class="text-xs font-bold text-slate-600 dark:text-slate-300">{{ item.product || "Heart" }}</span>
                                 <span class="text-slate-300 dark:text-slate-600">•</span>
-                                <span class="text-xs font-mono font-bold text-slate-500 dark:text-slate-400">@{{ item.account }}</span>
+                                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
+                                    <span v-if="item.contactPlatform === 'whatsapp'">📱</span>
+                                    <span v-else-if="item.contactPlatform === 'instagram'">📸</span>
+                                    <span v-else-if="item.contactPlatform === 'tiktok'">🎵</span>
+                                    <span v-else-if="item.contactPlatform === 'x'">𝕏</span>
+                                    <span v-else-if="item.contactPlatform === 'in_game'">🎮</span>
+                                    <span v-else>📝</span>
+                                    {{ item.contactIdentifier || item.account || "-" }}
+                                </span>
                                 <span class="text-slate-300 dark:text-slate-600">•</span>
                                 <span class="text-xs text-slate-400">{{ item.startDate || "-" }}</span>
                             </div>
@@ -669,11 +710,22 @@ onMounted(async () => {
                             />
                         </div>
 
-                        <div class="sm:col-span-2">
-                            <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">Akun / Username</label>
-                            <input
-                                v-model="editForm.account"
+                        <div>
+                            <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">Platform Kontak</label>
+                            <select
+                                v-model="editForm.contactPlatform"
                                 class="mt-1 w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                            >
+                                <option v-for="p in CONTACT_PLATFORMS" :key="p.value" :value="p.value">{{ p.label }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] font-black tracking-widest uppercase text-slate-400">{{ editPlatformInfo.label }}</label>
+                            <input
+                                v-model="editForm.contactIdentifier"
+                                class="mt-1 w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                                :placeholder="editPlatformInfo.placeholder"
                             />
                         </div>
 

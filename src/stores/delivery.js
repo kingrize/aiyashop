@@ -71,11 +71,23 @@ function sumLogs(logs) {
     );
 }
 
+// Valid contact platform values
+const VALID_PLATFORMS = ["whatsapp", "instagram", "tiktok", "x", "in_game", "other"];
+
+function normalizeContactPlatform(v) {
+    const s = String(v || "").trim().toLowerCase();
+    return VALID_PLATFORMS.includes(s) ? s : "in_game";
+}
+
 function buildPublicDocFromPrivate(order) {
     const trackingCode = toUpperCode(order?.trackingCode);
 
     const customerName = String(order?.customerName || "").trim();
     const usernameAlias = String(order?.usernameAlias || "").trim();
+
+    // Contact info (new fields)
+    const contactPlatform = normalizeContactPlatform(order?.contactPlatform);
+    const contactIdentifier = String(order?.contactIdentifier || order?.account || "").trim();
 
     const productName = String(
         order?.product || order?.productName || order?.title || "Pesanan",
@@ -118,6 +130,10 @@ function buildPublicDocFromPrivate(order) {
 
         // Username (alias)
         usernameAlias: usernameAlias || "-",
+
+        // Contact info (new fields for clarity)
+        contactPlatform,
+        contactIdentifier,
 
         // progress
         totalTarget,
@@ -176,6 +192,10 @@ export const useDeliveryStore = defineStore("delivery", {
         sorted(state) {
             return [...(state.items || [])].sort(sortByUpdatedDesc);
         },
+        // Alias for consistency with OrdersPanel
+        deliveries(state) {
+            return state.items || [];
+        },
     },
 
     actions: {
@@ -229,15 +249,22 @@ export const useDeliveryStore = defineStore("delivery", {
                 // Normalisasi agar kompat sama data lama (totalTarget/productName/dll)
                 this.items = snaps.docs.map((d) => {
                     const data = d.data() || {};
-                    const account = String(data.account || data.username || "").trim();
+                    // Backward compat: contactIdentifier dari field lama (account/username)
+                    const contactIdentifier = String(data.contactIdentifier || data.account || data.username || "").trim();
+                    // Backward compat: default platform to 'in_game' for existing data
+                    const contactPlatform = normalizeContactPlatform(data.contactPlatform);
                     return {
                         id: d.id,
                         ...data,
                         // field yang dipakai DeliveriesPanel
                         customerName: String(data.customerName || "").trim() || "Customer",
-                        account,
+                        // New contact fields
+                        contactPlatform,
+                        contactIdentifier,
+                        // Legacy field for backwards compat (deprecated)
+                        account: contactIdentifier,
                         usernameAlias:
-                            String(data.usernameAlias || "").trim() || maskUsername(account),
+                            String(data.usernameAlias || "").trim() || maskUsername(contactIdentifier),
                         product: String(data.product || data.productName || "Heart").trim(),
                         total: safeNumber(data.total ?? data.totalTarget),
                         perDay: safeNumber(data.perDay || 10) || 10,
@@ -245,6 +272,8 @@ export const useDeliveryStore = defineStore("delivery", {
                         notes: data.notes || "",
                         status: normalizeStatus(data.status),
                         logs: Array.isArray(data.logs) ? data.logs : [],
+                        // Order linking
+                        orderId: data.orderId || null,
                     };
                 });
                 return this.items;
@@ -279,9 +308,11 @@ export const useDeliveryStore = defineStore("delivery", {
             const customerName = String(payload?.customerName || "").trim();
             if (!customerName) throw new Error("Nama customer wajib");
 
-            const account = String(payload?.account || payload?.username || "").trim();
-            // account boleh kosong, tapi alias akan jadi '-' di public
-            const usernameAlias = maskUsername(account);
+            // New contact fields (with backward compat)
+            const contactPlatform = normalizeContactPlatform(payload?.contactPlatform);
+            const contactIdentifier = String(payload?.contactIdentifier || payload?.account || payload?.username || "").trim();
+            // Masked alias for public display
+            const usernameAlias = maskUsername(contactIdentifier);
 
             const product = String(payload?.product || payload?.productName || "Heart").trim();
 
@@ -300,7 +331,11 @@ export const useDeliveryStore = defineStore("delivery", {
             const docData = {
                 trackingCode,
                 customerName,
-                account,
+                // New contact fields
+                contactPlatform,
+                contactIdentifier,
+                // Legacy field for backwards compat (deprecated)
+                account: contactIdentifier,
                 usernameAlias: usernameAlias || "-",
 
                 product,
@@ -313,6 +348,9 @@ export const useDeliveryStore = defineStore("delivery", {
                 // kompat field lama
                 productName: product,
                 totalTarget: total,
+
+                // Order linking
+                orderId: payload?.orderId || null,
 
                 logs: [],
                 createdAt: serverTimestamp(),
@@ -333,6 +371,26 @@ export const useDeliveryStore = defineStore("delivery", {
             return this.createDelivery(payload);
         },
 
+        // Link an existing delivery to an order
+        async linkOrder(deliveryId, orderId) {
+            if (!deliveryId) throw new Error("Missing deliveryId");
+            if (!orderId) throw new Error("Missing orderId");
+
+            const ref = doc(db, PRIVATE_COL, deliveryId);
+            await updateDoc(ref, {
+                orderId,
+                updatedAt: serverTimestamp(),
+            });
+
+            // Update local state
+            const idx = this.items.findIndex(it => it.id === deliveryId);
+            if (idx !== -1) {
+                this.items[idx].orderId = orderId;
+            }
+
+            return true;
+        },
+
         async updateDelivery(id, patch) {
             if (!id) throw new Error("Missing id");
 
@@ -342,27 +400,39 @@ export const useDeliveryStore = defineStore("delivery", {
 
             const current = { id, ...snap.data() };
 
+            // Handle contactIdentifier update (new field or legacy account field)
+            const hasContactIdentifierUpdate = patch?.contactIdentifier !== undefined || patch?.account !== undefined;
+            const newContactIdentifier = hasContactIdentifierUpdate
+                ? String(patch?.contactIdentifier ?? patch?.account ?? "").trim()
+                : null;
+
             const normalized = {
                 ...(patch?.customerName !== undefined
                     ? { customerName: String(patch.customerName || "").trim() }
                     : {}),
-                ...(patch?.account !== undefined
+                // Contact platform update
+                ...(patch?.contactPlatform !== undefined
+                    ? { contactPlatform: normalizeContactPlatform(patch.contactPlatform) }
+                    : {}),
+                // Contact identifier update (with legacy field sync)
+                ...(hasContactIdentifierUpdate
                     ? {
-                          account: String(patch.account || "").trim(),
-                          usernameAlias: maskUsername(String(patch.account || "").trim()) || "-",
-                      }
+                        contactIdentifier: newContactIdentifier,
+                        account: newContactIdentifier, // legacy field sync
+                        usernameAlias: maskUsername(newContactIdentifier) || "-",
+                    }
                     : {}),
                 ...(patch?.product !== undefined
                     ? {
-                          product: String(patch.product || "Heart").trim(),
-                          productName: String(patch.product || "Heart").trim(),
-                      }
+                        product: String(patch.product || "Heart").trim(),
+                        productName: String(patch.product || "Heart").trim(),
+                    }
                     : {}),
                 ...(patch?.total !== undefined
                     ? {
-                          total: safeNumber(patch.total),
-                          totalTarget: safeNumber(patch.total),
-                      }
+                        total: safeNumber(patch.total),
+                        totalTarget: safeNumber(patch.total),
+                    }
                     : {}),
                 ...(patch?.perDay !== undefined ? { perDay: Math.max(1, safeNumber(patch.perDay)) } : {}),
                 ...(patch?.startDate !== undefined ? { startDate: String(patch.startDate || "").trim() } : {}),

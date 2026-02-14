@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from "vue-router";
+import { createRouter, createWebHistory, RouterView } from "vue-router";
 import HomeView from "../views/HomeView.vue";
 // HAPUS import AdminDashboard statis di sini agar ringan
 
@@ -37,39 +37,40 @@ const router = createRouter({
       component: () => import("../views/admin/AdminDashboard.vue"),
       meta: { requiresAuth: true, requiresAdmin: true },
     },
+
+    // --- TRACKING ROUTES (REFACTORED) ---
+    // Menggunakan nested route agar rapi dan tidak duplikat
     {
       path: "/track",
-      name: "track",
-      component: () => import("../views/TrackOrder.vue"),
-      meta: { title: "Lacak Pesanan - AiyaShop" },
+      component: RouterView,
+      children: [
+        {
+          path: "",
+          name: "track",
+          component: () => import("../views/TrackOrder.vue"),
+          meta: { title: "Lacak Pesanan - AiyaShop" },
+        },
+        {
+          path: "all",
+          name: "track-all",
+          component: () => import("../views/TrackAll.vue"),
+          meta: { title: "Semua Pesanan - AiyaShop" },
+        },
+        {
+          path: ":code",
+          name: "track-code",
+          component: () => import("../views/TrackOrder.vue"),
+          meta: { title: "Detail Pesanan - AiyaShop" }, // Beda title dikit biar jelas
+          props: true,
+        },
+      ],
     },
-    {
-      path: "/track/:code",
-      name: "track-code",
-      component: () => import("../views/TrackOrder.vue"),
-      meta: { title: "Lacak Pesanan - AiyaShop" },
-    },
+
+    // Catch-all 404
     {
       path: "/:pathMatch(.*)*",
       name: "not-found",
       component: () => import("../views/NotFoundView.vue"),
-    },
-    {
-      path: "/track",
-      name: "track",
-      component: () => import("../views/TrackOrder.vue"),
-    },
-
-    {
-      path: "/track/all",
-      name: "track-all",
-      component: () => import("../views/TrackAll.vue"),
-    },
-
-    {
-      path: "/track/:code",
-      name: "track-code",
-      component: () => import("../views/TrackOrder.vue"),
     },
   ],
   scrollBehavior(to, from, savedPosition) {

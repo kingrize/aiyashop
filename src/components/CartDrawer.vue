@@ -4,6 +4,7 @@ import { useCartStore } from "../stores/cart";
 import { usePromoStore } from "../stores/promo";
 import { useUserStore } from "../stores/user";
 import { useBuyerNameStore } from "../stores/buyerName";
+import { useOrderStore } from "../stores/order";
 import {
     ShoppingBag,
     X,
@@ -51,6 +52,11 @@ const store = useCartStore();
 const promoStore = usePromoStore();
 const userStore = useUserStore();
 const buyerNameStore = useBuyerNameStore();
+const orderStore = useOrderStore();
+
+// Track current order for checkout flow
+const currentOrderId = ref(null);
+const currentOrderShortId = ref(null);
 
 const buyerNameInputRef = ref(null);
 
@@ -149,6 +155,13 @@ const handleAuthSubmit = async () => {
     }
 };
 
+// Helper for generating ID client-side (to link transaction & order)
+const generateShortId = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `ORD-${timestamp}-${random}`;
+};
+
 const handleCheckoutClick = async () => {
     if (store.items.length === 0) return;
 
@@ -160,7 +173,9 @@ const handleCheckoutClick = async () => {
         return;
     }
 
+    // --- FLOW A: MEMBER BALANCE (PREPARE) ---
     if (selectedPayment.value === "member") {
+        // STEP A0: Preflight Checks
         if (!userStore.user) {
             alert("Silakan login dulu ya kak! 😊");
             return;
@@ -169,84 +184,182 @@ const handleCheckoutClick = async () => {
             alert("Yah, saldo member kakak kurang nih 🥺 Topup dulu yuk!");
             return;
         }
+        
+        // Final confirmation (UI Lock is handled by modal state)
         showConfirmModal.value = true;
-    } else {
-        // QRIS / Manual payment: TANPA kode unik
-        const totalExact = finalTotalComputed.value;
-        const orderId = `ORD-${Date.now().toString().slice(-4)}-${Math.floor(Math.random() * 100)}`;
+        return;
+    }
 
-        manualPaymentData.value = {
-            total: totalExact,
-            id: orderId,
-            buyerName: buyerNameStore.trimmedName,
-        };
-        showManualPayment.value = true;
+    // --- FLOW B: QRIS / MANUAL (ORDER FIRST) ---
+    if (selectedPayment.value === "qris") {
+        await processQrisCheckout();
     }
 };
 
+// --- FLOW A: EXECUTION (Commit) ---
 const confirmMemberPayment = async () => {
     isProcessingPayment.value = true;
     const total = finalTotalComputed.value;
+    const shortId = generateShortId(); // Generate ID upfront for linkage
 
     try {
-        const userRef = doc(db, "users", userStore.user.uid);
-        await updateDoc(userRef, {
-            saldo: increment(-total),
-            totalTopUp: increment(0),
-        });
+        // STEP A1: Lock UI (handled by isProcessingPayment)
 
-        await userStore.fetchMemberData();
+        // STEP A2: FINANCIAL COMMIT (Source of Truth)
+        // Deduct balance FIRST. If this fails, flow stops.
+        const deductResult = await userStore.deductBalance(
+            total, 
+            `Pembayaran Order ${shortId} (${store.totalItems} items)`,
+            shortId
+        );
 
-        try {
-            const summaryItems = store.items
-                .map((i) => `${i.name} (${i.qty}x)`)
-                .join(", ");
-            await addDoc(
-                collection(db, "users", userStore.user.uid, "transactions"),
-                {
-                    type: "expense",
-                    title: "Pembelian Joki",
-                    desc: summaryItems,
-                    amount: total,
-                    buyerName: buyerNameStore.trimmedName,
-                    createdAt: serverTimestamp(),
-                    status: "success",
-                },
-            );
-            if (userStore.fetchTransactions)
-                await userStore.fetchTransactions();
-        } catch (historyError) {
-            console.warn("Gagal mencatat history:", historyError);
+        if (!deductResult.success) {
+            throw new Error(deductResult.message || "Gagal memproses pembayaran");
         }
 
+        // --- PAYMENT SUCCESSFUL POINT --- 
+        // From here on, the user has PAID. We must not fail the UX.
+
+        let finalOrderId = null;
+
+        // STEP A3: CREATE ORDER (Non-Blocking)
+        try {
+            const orderResult = await orderStore.createOrder({
+                shortId: shortId, // Use the same ID
+                userId: userStore.user.uid,
+                buyerName: buyerNameStore.trimmedName,
+                contactPlatform: "in_game",
+                contactIdentifier: userStore.user.displayName || "",
+                items: store.items.map(item => ({
+                    productId: item.id,
+                    productName: item.name,
+                    quantity: item.qty,
+                    unitPrice: item.price,
+                    subtotal: item.price * item.qty,
+                })),
+                subtotal: store.totalPrice,
+                discount: promoStore.activeCode && isPromoEligible.value 
+                    ? promoStore.savings(store.totalPrice) 
+                    : 0,
+                promoCode: promoStore.activeCode || null,
+                total: total,
+                paymentMethod: "balance",
+                paymentStatus: "paid", // Auto-paid
+                source: "member_checkout",
+            });
+
+            if (orderResult.success) {
+                finalOrderId = orderResult.orderId;
+            } else {
+                console.error("Order creation failed (but payment success):", orderResult.error);
+                // We still proceed to success because payment is done.
+            }
+        } catch (orderError) {
+            console.error("Critical: Order creation exception (payment success):", orderError);
+            // Swallow error to protect payment success state
+        }
+
+        // STEP A4: UX SUCCESS
+        currentOrderShortId.value = shortId;
+        currentOrderId.value = finalOrderId;
+        
         showConfirmModal.value = false;
         showSuccessModal.value = true;
 
         store.clearCart();
         promoStore.resetPromo();
 
+        // Auto-redirect logic
         countdown.value = 3;
         const timer = setInterval(() => {
             countdown.value--;
             if (countdown.value <= 0) {
                 clearInterval(timer);
-                processCheckout("LUNAS (Saldo Member)");
+                processCheckout("LUNAS (Saldo Member)", shortId);
                 setTimeout(() => {
                     showSuccessModal.value = false;
                     store.toggleCart();
                 }, 1000);
             }
         }, 1000);
+
     } catch (error) {
-        console.error("Error transaksi:", error);
-        alert("Gagal memproses pembayaran. Saldo aman. Coba lagi ya!");
+        // This catch block is ONLY for Step A2 (Financial Commit) failure.
+        // If money wasn't deducted, we can safely show error.
+        console.error("Payment failed:", error);
+        alert(`Gagal memproses pembayaran: ${error.message}`);
     } finally {
         isProcessingPayment.value = false;
     }
 };
 
-const processCheckout = (statusBayar) => {
+// --- FLOW B: EXECUTION ---
+const processQrisCheckout = async () => {
+    isProcessingPayment.value = true;
+    const total = finalTotalComputed.value;
+
+    // Generate shortId upfront so QRIS modal can always show it
+    const localShortId = generateShortId();
+    let firestoreOrderId = null;
+
+    try {
+        // STEP B1: CREATE ORDER (Best-Effort)
+        // Attempt to save to Firestore, but don't block the payment modal
+        const orderResult = await orderStore.createOrder({
+            shortId: localShortId,
+            userId: userStore.user?.uid || null,
+            buyerName: buyerNameStore.trimmedName,
+            contactPlatform: "whatsapp",
+            contactIdentifier: "",
+            items: store.items.map(item => ({
+                productId: item.id,
+                productName: item.name,
+                quantity: item.qty,
+                unitPrice: item.price,
+                subtotal: item.price * item.qty,
+            })),
+            subtotal: store.totalPrice,
+            discount: promoStore.activeCode && isPromoEligible.value 
+                ? promoStore.savings(store.totalPrice) 
+                : 0,
+            promoCode: promoStore.activeCode || null,
+            total: total,
+            paymentMethod: "qris",
+            paymentStatus: "pending",
+            source: "member_checkout",
+        });
+
+        if (orderResult.success) {
+            firestoreOrderId = orderResult.orderId;
+        } else {
+            console.warn("Order creation failed, proceeding with local ID:", orderResult.error);
+        }
+    } catch (error) {
+        console.warn("QRIS order save error (proceeding anyway):", error);
+    }
+
+    // STEP B2: ALWAYS show payment modal — user must be able to pay
+    currentOrderId.value = firestoreOrderId;
+    currentOrderShortId.value = localShortId;
+
+    manualPaymentData.value = {
+        total: total,
+        id: localShortId,
+        orderId: firestoreOrderId || localShortId,
+        buyerName: buyerNameStore.trimmedName,
+    };
+    showManualPayment.value = true;
+    isProcessingPayment.value = false;
+};
+
+const processCheckout = (statusBayar, orderShortId = null) => {
     let message = "Halo Admin Aiya! ✨ Saya mau order dong:%0A%0A";
+
+    // Include order reference
+    const orderId = orderShortId || currentOrderShortId.value;
+    if (orderId) {
+        message += `📦 *Order ID: ${orderId}*%0A%0A`;
+    }
 
     if (store.items.length === 0 && statusBayar.includes("LUNAS")) {
         message += "✅ *Pembayaran LUNAS via Saldo Member*%0A";
@@ -260,13 +373,20 @@ const processCheckout = (statusBayar) => {
         message += `%0A📝 Nama Pembeli: *${encodeURIComponent(buyerName)}*`;
     }
 
+    /*
+    // Optional: User Details (Only if relevant/logged in)
     if (userStore.user) {
         message += `%0A👤 User: ${userStore.user.displayName}`;
-        message += `%0A📧 Email: ${userStore.user.email}`;
     }
+    */
 
     message += `%0AMetode Bayar: ${selectedPayment.value === "member" ? "💎 Saldo Member" : "QRIS / E-Wallet"}`;
     message += `%0AStatus: *${statusBayar}*`;
+
+    // Mark WhatsApp as sent if we have orderId
+    if (currentOrderId.value) {
+        orderStore.markWhatsAppSent(currentOrderId.value);
+    }
 
     window.open(`https://wa.me/6285942963323?text=${message}`, "_blank");
 };
@@ -400,25 +520,77 @@ const processCheckout = (statusBayar) => {
                     </div>
                 </div>
 
+                <!-- UX: 3-Step Checkout Flow for mobile clarity -->
                 <div
-                    class="bg-white dark:bg-graphite border-t border-dashed border-sky-100 dark:border-slate-700 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
+                    class="bg-white dark:bg-graphite border-t border-slate-100 dark:border-slate-700 relative z-10 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]"
                 >
-                    <div class="px-6 pt-4 pb-2">
-                        <div class="flex gap-2">
+                    <!-- STEP 1: Order Review (No input fields) -->
+                    <div class="px-4 pt-4 pb-3 border-b border-dashed border-slate-100 dark:border-slate-700">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-sky-500 text-white text-[9px] flex items-center justify-center font-bold">1</span>
+                            Order Review
+                        </p>
+                        <div class="space-y-2">
+                            <div
+                                class="flex justify-between items-center text-xs text-slate-500 dark:text-slate-400"
+                            >
+                                <span>{{ store.totalItems }} item(s)</span>
+                                <span>{{ formatRupiah(store.totalPrice) }}</span>
+                            </div>
+                            <div
+                                v-if="promoStore.activeCode && isPromoEligible"
+                                class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800"
+                            >
+                                <span class="flex items-center gap-1"
+                                    ><Tag :size="12" /> Hemat ({{
+                                        promoStore.activeCode
+                                    }})</span
+                                ><span
+                                    >-
+                                    {{
+                                        formatRupiah(
+                                            promoStore.savings(store.totalPrice),
+                                        )
+                                    }}</span
+                                >
+                            </div>
+                            <div
+                                class="flex justify-between items-end pt-1"
+                            >
+                                <span
+                                    class="text-sm font-bold text-slate-600 dark:text-slate-300"
+                                    >Total</span
+                                ><span
+                                    class="text-xl font-black text-sky-500 dark:text-sky-400"
+                                    >{{
+                                        formatRupiah(
+                                            promoStore.activeCode && isPromoEligible
+                                                ? promoStore.calculateTotal(
+                                                      store.totalPrice,
+                                                  )
+                                                : store.totalPrice,
+                                        )
+                                    }}</span
+                                >
+                            </div>
+                        </div>
+
+                        <!-- Promo Code (compact) -->
+                        <div class="mt-3 flex gap-2">
                             <div class="relative flex-1 group">
                                 <div
                                     class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
                                 >
                                     <Tag
-                                        :size="16"
+                                        :size="14"
                                         class="text-slate-400 group-focus-within:text-sky-500 transition"
                                     />
                                 </div>
                                 <input
                                     v-model="promoInput"
                                     type="text"
-                                    placeholder="Kode Promo"
-                                    class="pl-9 pr-8 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl py-2.5 text-sm focus:outline-none focus:border-sky-300 focus:ring-4 focus:ring-sky-50 dark:focus:ring-slate-700 transition uppercase font-bold text-slate-600 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                                    placeholder="Promo"
+                                    class="pl-8 pr-6 w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl py-2 text-xs focus:outline-none focus:border-sky-300 transition uppercase font-bold text-slate-600 dark:text-slate-200 placeholder-slate-400"
                                     @keyup.enter="handleApplyPromo"
                                     :disabled="!!promoStore.activeCode"
                                 />
@@ -428,9 +600,9 @@ const processCheckout = (statusBayar) => {
                                         promoStore.resetPromo();
                                         promoInput = '';
                                     "
-                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-rose-500 cursor-pointer transition"
+                                    class="absolute inset-y-0 right-0 pr-2 flex items-center text-slate-400 hover:text-rose-500 cursor-pointer transition"
                                 >
-                                    <XCircle :size="16" />
+                                    <XCircle :size="14" />
                                 </button>
                             </div>
                             <button
@@ -440,121 +612,81 @@ const processCheckout = (statusBayar) => {
                                     !promoInput ||
                                     !!promoStore.activeCode
                                 "
-                                class="bg-slate-800 dark:bg-slate-700 text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-lg shadow-slate-200 dark:shadow-none flex items-center justify-center min-w-[70px]"
+                                class="bg-slate-800 dark:bg-slate-700 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center min-w-[60px]"
                             >
                                 <Loader2
                                     v-if="promoStore.isLoading"
-                                    :size="16"
+                                    :size="14"
                                     class="animate-spin"
                                 />
                                 <span v-else>{{
-                                    promoStore.activeCode ? "Aktif" : "Pakai"
+                                    promoStore.activeCode ? "✓" : "OK"
                                 }}</span>
                             </button>
                         </div>
                         <p
                             v-if="promoMessage"
-                            class="text-[10px] mt-2 font-bold ml-1 flex items-center gap-1"
+                            class="text-[10px] mt-1.5 font-bold ml-1 flex items-center gap-1"
                             :class="
                                 promoStore.error
                                     ? 'text-rose-500'
                                     : 'text-emerald-500'
                             "
                         >
-                            <Sparkles v-if="!promoStore.error" :size="12" />
+                            <Sparkles v-if="!promoStore.error" :size="10" />
                             {{ promoMessage }}
                         </p>
                     </div>
 
-                    <!-- Buyer Name Input -->
-                    <div class="px-6 py-2">
-                        <label
-                            for="buyerNameInput"
-                            class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1.5"
-                        >
-                            <UserCircle :size="14" /> Your Name
-                        </label>
-                        <div class="relative group">
-                            <input
-                                id="buyerNameInput"
-                                ref="buyerNameInputRef"
-                                type="text"
-                                :value="buyerNameStore.buyerName"
-                                @input="buyerNameStore.setBuyerName($event.target.value)"
-                                placeholder="Enter your name"
-                                maxlength="50"
-                                class="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-4 transition font-medium text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
-                                :class="
-                                    buyerNameStore.buyerNameError
-                                        ? 'border-rose-300 dark:border-rose-600 focus:border-rose-400 focus:ring-rose-50 dark:focus:ring-rose-900/30'
-                                        : 'border-slate-200 dark:border-slate-600 focus:border-sky-300 focus:ring-sky-50 dark:focus:ring-slate-700'
-                                "
-                                aria-describedby="buyerNameHelper buyerNameError"
-                            />
-                        </div>
-                        <p
-                            v-if="buyerNameStore.buyerNameError"
-                            id="buyerNameError"
-                            class="text-[10px] mt-1.5 font-bold text-rose-500 flex items-center gap-1"
-                            role="alert"
-                        >
-                            <AlertCircle :size="12" />
-                            {{ buyerNameStore.buyerNameError }}
-                        </p>
-                        <p
-                            v-else
-                            id="buyerNameHelper"
-                            class="text-[10px] mt-1.5 text-slate-400 dark:text-slate-500"
-                        >
-                            This helps us process your order with minimal chat.
-                        </p>
-                    </div>
-
-                    <div class="px-6 py-2">
-                        <p
-                            class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2"
-                        >
-                            Pilih Pembayaran
+                    <!-- STEP 2: Payment Method -->
+                    <div class="px-4 py-3 border-b border-dashed border-slate-100 dark:border-slate-700">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-sky-500 text-white text-[9px] flex items-center justify-center font-bold">2</span>
+                            Payment
                         </p>
                         <div
-                            class="flex gap-2 overflow-x-auto pb-2 custom-scrollbar"
+                            class="flex gap-2"
                         >
                             <button
                                 @click="selectedPayment = 'qris'"
-                                class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition whitespace-nowrap"
+                                class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border text-xs font-medium transition"
                                 :class="
                                     selectedPayment === 'qris'
                                         ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-600 dark:text-sky-300 shadow-sm'
                                         : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                 "
                             >
-                                <QrCode :size="14" /> QRIS / E-Wallet
+                                <QrCode :size="18" />
+                                <span class="font-bold">QRIS</span>
+                                <span class="text-[9px] opacity-70">Tunggu konfirmasi</span>
                             </button>
                             <button
                                 @click="selectedPayment = 'member'"
-                                class="flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium transition whitespace-nowrap"
+                                class="flex-1 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border text-xs font-medium transition"
                                 :class="
                                     selectedPayment === 'member'
                                         ? 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-300 shadow-sm'
                                         : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                                 "
                             >
-                                <UserCheck :size="14" /> Member
+                                <Wallet :size="18" />
+                                <span class="font-bold">Saldo</span>
+                                <span class="text-[9px] opacity-70">Instan</span>
                             </button>
                         </div>
 
                         <transition name="fade">
                             <div
                                 v-if="selectedPayment === 'member'"
-                                class="mt-3 bg-indigo-50 dark:bg-indigo-950/40 p-3 rounded-xl border border-indigo-100 dark:border-indigo-900 relative overflow-hidden"
+                                class="mt-2 bg-indigo-50 dark:bg-indigo-950/40 p-2.5 rounded-xl border border-indigo-100 dark:border-indigo-900 relative overflow-hidden"
                             >
                                 <div v-if="userStore.user">
                                     <div
-                                        class="flex justify-between items-center mb-1"
+                                        class="flex justify-between items-center"
                                     >
                                         <span
                                             class="text-xs font-bold text-indigo-700 dark:text-indigo-300"
-                                            >Saldo Kamu:</span
+                                            >Saldo:</span
                                         ><span
                                             class="text-sm font-extrabold text-indigo-600 dark:text-indigo-400"
                                             >{{
@@ -573,34 +705,32 @@ const processCheckout = (statusBayar) => {
                                         "
                                         class="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-1"
                                     >
-                                        <XCircle :size="12" /> Saldo kurang,
-                                        topup ke admin ya!
+                                        <XCircle :size="12" /> Saldo kurang
                                     </div>
                                     <div
                                         v-else
                                         class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 mt-1"
                                     >
-                                        <CheckCircle2 :size="12" /> Saldo cukup,
-                                        siap potong!
+                                        <CheckCircle2 :size="12" /> Siap bayar!
                                     </div>
                                 </div>
                                 <div v-else>
                                     <p
                                         class="text-[10px] text-indigo-500 dark:text-indigo-300 mb-2 font-bold text-center"
                                     >
-                                        Login Member Only 🔐
+                                        Login Member Required 🔐
                                     </p>
-                                    <div class="space-y-2">
+                                    <div class="space-y-1.5">
                                         <div class="relative">
                                             <span
                                                 class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                                                ><User :size="14"
+                                                ><User :size="12"
                                             /></span>
                                             <input
                                                 v-model="authForm.username"
                                                 type="text"
                                                 placeholder="Username"
-                                                class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
+                                                class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-slate-950 text-slate-700 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-indigo-400"
                                             />
                                         </div>
                                         <input
@@ -612,13 +742,13 @@ const processCheckout = (statusBayar) => {
                                     </div>
                                     <p
                                         v-if="userStore.authError"
-                                        class="text-[9px] text-rose-500 mt-2 font-bold flex items-center gap-1"
+                                        class="text-[9px] text-rose-500 mt-1 font-bold flex items-center gap-1"
                                     >
                                         <AlertCircle :size="10" />
                                         {{ userStore.authError }}
                                     </p>
 
-                                    <div class="mt-3 space-y-2">
+                                    <div class="mt-2 space-y-1.5">
                                         <button
                                             @click="handleAuthSubmit"
                                             :disabled="isAuthLoading"
@@ -629,14 +759,14 @@ const processCheckout = (statusBayar) => {
                                                 :size="12"
                                                 class="animate-spin"
                                             />
-                                            Masuk
+                                            Login
                                         </button>
                                         <a
                                             href="https://wa.me/6285942963323?text=Halo%20Admin%20Aiya!%20Saya%20mau%20daftar%20member%20baru%20dong%20✨"
                                             target="_blank"
                                             class="block text-center text-[10px] text-indigo-500 dark:text-indigo-400 font-bold hover:underline flex items-center justify-center gap-1"
-                                            >Belum punya akun? Daftar via WA
-                                            <UserPlus :size="12"
+                                            >Daftar via WA
+                                            <UserPlus :size="10"
                                         /></a>
                                     </div>
                                 </div>
@@ -644,55 +774,45 @@ const processCheckout = (statusBayar) => {
                         </transition>
                     </div>
 
-                    <div class="p-6 pt-2 space-y-3">
-                        <div
-                            class="flex justify-between items-center text-xs text-slate-400 dark:text-slate-500"
-                        >
-                            <span>Subtotal</span
-                            ><span>{{ formatRupiah(store.totalPrice) }}</span>
+                    <!-- STEP 3: Contact Info (Minimal, optional for balance) -->
+                    <div class="px-4 py-3">
+                        <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-1.5">
+                            <span class="w-4 h-4 rounded-full bg-sky-500 text-white text-[9px] flex items-center justify-center font-bold">3</span>
+                            Your Info
+                            <span v-if="selectedPayment === 'member'" class="text-slate-300 font-normal">(optional)</span>
+                        </p>
+                        <div class="relative group">
+                            <input
+                                id="buyerNameInput"
+                                ref="buyerNameInputRef"
+                                type="text"
+                                :value="buyerNameStore.buyerName"
+                                @input="buyerNameStore.setBuyerName($event.target.value)"
+                                placeholder="Nama kamu"
+                                maxlength="50"
+                                class="w-full bg-slate-50 dark:bg-slate-800 border rounded-xl py-2.5 px-3 text-sm focus:outline-none focus:ring-2 transition font-medium text-slate-700 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+                                :class="
+                                    buyerNameStore.buyerNameError
+                                        ? 'border-rose-300 dark:border-rose-600 focus:border-rose-400 focus:ring-rose-100'
+                                        : 'border-slate-200 dark:border-slate-600 focus:border-sky-300 focus:ring-sky-100'
+                                "
+                            />
                         </div>
-                        <div
-                            v-if="promoStore.activeCode && isPromoEligible"
-                            class="flex justify-between items-center text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 p-2 rounded-lg border border-emerald-100 dark:border-emerald-800 animate-in slide-in-from-left-2"
+                        <p
+                            v-if="buyerNameStore.buyerNameError"
+                            class="text-[10px] mt-1 font-bold text-rose-500 flex items-center gap-1"
                         >
-                            <span class="flex items-center gap-1"
-                                ><Tag :size="12" /> Hemat ({{
-                                    promoStore.activeCode
-                                }})</span
-                            ><span
-                                >-
-                                {{
-                                    formatRupiah(
-                                        promoStore.savings(store.totalPrice),
-                                    )
-                                }}</span
-                            >
-                        </div>
-                        <div
-                            class="flex justify-between items-end pt-2 border-t border-slate-100 dark:border-slate-700"
-                        >
-                            <span
-                                class="text-sm font-bold text-slate-600 dark:text-slate-300"
-                                >Total Bayar</span
-                            ><span
-                                class="text-2xl font-extrabold text-sky-500 dark:text-sky-400"
-                                >{{
-                                    formatRupiah(
-                                        promoStore.activeCode && isPromoEligible
-                                            ? promoStore.calculateTotal(
-                                                  store.totalPrice,
-                                              )
-                                            : store.totalPrice,
-                                    )
-                                }}</span
-                            >
-                        </div>
+                            <AlertCircle :size="10" />
+                            {{ buyerNameStore.buyerNameError }}
+                        </p>
+
+                        <!-- UX: Primary CTA - 44px+ height, full width -->
                         <button
                             @click="handleCheckoutClick"
                             :disabled="
                                 store.items.length === 0 || isProcessingPayment
                             "
-                            class="w-full btn-bouncy text-white font-bold py-4 rounded-2xl shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4 hover:brightness-105"
+                            class="w-full min-h-[48px] text-white font-bold py-3.5 rounded-xl shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-4 hover:brightness-105 transition active:scale-[0.98]"
                             :class="
                                 selectedPayment === 'member'
                                     ? 'bg-gradient-to-r from-indigo-500 to-purple-500 shadow-indigo-100 dark:shadow-none'
@@ -707,11 +827,10 @@ const processCheckout = (statusBayar) => {
                             <span
                                 v-else-if="selectedPayment === 'member'"
                                 class="flex items-center gap-2"
-                                ><Wallet :size="20" /> Gunakan Saldo</span
+                                ><Wallet :size="20" /> Bayar Sekarang</span
                             >
                             <span v-else class="flex items-center gap-2"
-                                ><MessageCircle :size="20" /> Checkout
-                                Sekarang</span
+                                ><MessageCircle :size="20" /> Checkout</span
                             >
                         </button>
                     </div>

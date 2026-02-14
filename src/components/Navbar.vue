@@ -19,6 +19,7 @@ import {
     ClipboardList,
 } from "lucide-vue-next";
 import { useRouter } from "vue-router";
+import { formatRupiah } from "../utils/format";
 
 const router = useRouter();
 const cart = useCartStore();
@@ -128,12 +129,6 @@ const handleNavbarAuth = async () => {
 const openCart = () => {
     cart.toggleCart();
 };
-const formatRupiah = (val) =>
-    new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-    }).format(val || 0);
 </script>
 
 <template>

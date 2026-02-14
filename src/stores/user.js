@@ -188,6 +188,58 @@ export const useUserStore = defineStore("user", {
         return false;
       }
     },
+
+    /**
+     * Deduct balance from current user (Member Payment)
+     * CRITICAL: This is the source of truth for member payments.
+     * @param {number} amount
+     * @param {string} desc - Transaction description
+     * @param {string} orderShortId - Optional ref if available immediately
+     */
+    async deductBalance(amount, desc, orderShortId = null) {
+      if (!this.user || !this.memberData)
+        return { success: false, message: "User not logged in" };
+      if (this.memberData.saldo < amount)
+        return { success: false, message: "Saldo tidak mencukupi" };
+
+      try {
+        const userRef = doc(db, "users", this.user.uid);
+
+        // 1. Deduct balance (Firestore Atomic Increment)
+        await updateDoc(userRef, {
+          saldo: increment(-amount),
+        });
+
+        // 2. Record Transaction
+        const transactionData = {
+          type: "expense",
+          title: "Pembayaran Order",
+          desc: desc || "Belanja di Aiya Shop",
+          amount: amount,
+          createdAt: serverTimestamp(),
+          status: "success",
+          source: "checkout",
+        };
+
+        if (orderShortId) transactionData.orderId = orderShortId;
+
+        const transRef = await addDoc(
+          collection(db, "users", this.user.uid, "transactions"),
+          transactionData
+        );
+
+        // 3. Refresh Local State
+        await this.fetchMemberData();
+        // Optimistically update local transaction list if needed
+        this.fetchTransactions();
+
+        return { success: true, transactionId: transRef.id };
+      } catch (error) {
+        console.error("Balance deduction failed:", error);
+        return { success: false, message: error.message };
+      }
+    },
+
     async login(username, password) {
       this.authError = null;
       try {

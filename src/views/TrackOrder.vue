@@ -191,7 +191,7 @@ onMounted(() => {
                 v-model="codeInput"
                 @keydown.enter="goSearch"
                 placeholder="Contoh: AB12-CD34"
-                class="w-full px-4 py-3 rounded-2xl border
+                class="w-full px-4 py-3 min-h-[44px] rounded-2xl border
                        bg-white/70 dark:bg-slate-950/20
                        border-slate-200/70 dark:border-white/10
                        text-slate-800 dark:text-white
@@ -203,9 +203,10 @@ onMounted(() => {
               </span>
             </div>
 
+            <!-- UX: 44px+ touch target -->
             <button
               @click="goSearch"
-              class="px-4 py-3 rounded-2xl font-black text-sm
+              class="px-5 py-3 min-h-[44px] rounded-2xl font-black text-sm
                      bg-rose-500 hover:bg-rose-600 text-white
                      shadow-lg shadow-rose-200/60 dark:shadow-none
                      transition active:scale-[0.98]"
@@ -224,9 +225,10 @@ onMounted(() => {
           <label class="text-[10px] font-black uppercase tracking-widest text-slate-400">
             Lihat Semua
           </label>
+          <!-- UX: 44px+ touch target -->
           <button
             @click="$router.push({ name: 'track-all' })"
-            class="mt-2 w-full px-4 py-3 rounded-2xl font-black text-sm
+            class="mt-2 w-full px-4 py-3 min-h-[44px] rounded-2xl font-black text-sm
                    bg-white/70 dark:bg-slate-950/20
                    border border-slate-200/70 dark:border-white/10
                    text-slate-700 dark:text-slate-200
@@ -283,9 +285,10 @@ onMounted(() => {
 
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
+            <!-- UX: Prominent status badge - larger for mobile visibility -->
             <div class="flex items-center gap-2">
               <span
-                class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border"
+                class="px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wide border"
                 :class="statusBadge(delivery.publicOrder.status)"
               >
                 {{ statusLabel(delivery.publicOrder.status) }}
@@ -330,18 +333,19 @@ onMounted(() => {
             </p>
           </div>
 
+          <!-- UX: 44px+ touch target for copy button -->
           <button
             @click="copyLink"
-            class="shrink-0 px-3 py-2 rounded-2xl border
+            class="shrink-0 px-4 py-3 min-h-[44px] rounded-2xl border
                    bg-white/70 dark:bg-slate-950/15
                    border-slate-200/60 dark:border-white/10
                    text-slate-700 dark:text-slate-200
                    hover:bg-white/90 dark:hover:bg-white/5
-                   transition flex items-center gap-2"
+                   transition flex items-center gap-2 active:scale-[0.98]"
           >
             <Check v-if="copied" class="w-4 h-4 text-emerald-500" />
             <Copy v-else class="w-4 h-4" />
-            <span class="text-xs font-black">{{ copied ? "Tersalin" : "Copy Link" }}</span>
+            <span class="text-xs font-black">{{ copied ? "Tersalin" : "Copy" }}</span>
           </button>
         </div>
 
@@ -463,12 +467,10 @@ onMounted(() => {
               class="rounded-2xl p-3 border bg-white/60 dark:bg-white/5 border-slate-200/60 dark:border-white/10
                      flex items-center justify-between gap-3"
             >
-              <div class="min-w-0">
-                <p class="text-xs font-black text-slate-800 dark:text-white">
+              <div class="min-w-0 flex items-center gap-2">
+                <CalendarDays class="w-4 h-4 text-sky-400 shrink-0" />
+                <p class="text-sm font-black text-slate-800 dark:text-white">
                   {{ prettyDate(log.date) }}
-                </p>
-                <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  Dikirim hari ini
                 </p>
               </div>
               <div

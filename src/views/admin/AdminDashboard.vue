@@ -6,6 +6,7 @@ import { useAnnouncementStore } from "../../stores/announcement";
 import { useRouter } from "vue-router";
 import ProductsPanel from "./ProductsPanel.vue";
 import DeliveriesPanel from "./DeliveriesPanel.vue";
+import OrdersPanel from "./OrdersPanel.vue";
 import { formatRupiah } from "../../utils/format";
 import {
     LayoutGrid,
@@ -29,6 +30,7 @@ import {
     ClipboardList,
     ChevronRight,
     Shield,
+    ShoppingCart,
 } from "lucide-vue-next";
 
 const userStore = useUserStore();
@@ -244,6 +246,7 @@ const deleteAnnouncement = (id) => {
 // Tab configuration for mobile nav
 const tabs = [
     { id: "dashboard", label: "Home", icon: LayoutGrid },
+    { id: "orders", label: "Orders", icon: ShoppingCart },
     { id: "users", label: "Users", icon: Users },
     { id: "promos", label: "Promo", icon: Tag },
     { id: "products", label: "Produk", icon: Package },
@@ -345,18 +348,20 @@ const tabs = [
                     <header class="hidden lg:flex justify-between items-end mb-8">
                         <div>
                             <h2 class="text-3xl font-black text-slate-900 dark:text-white mb-1">
-                                {{
+                            {{
                                     activeTab === "dashboard"
                                         ? "Overview"
-                                        : activeTab === "users"
-                                          ? "User Management"
-                                          : activeTab === "promos"
-                                            ? "Promo Codes"
-                                            : activeTab === "products"
-                                              ? "Products"
-                                              : activeTab === "deliveries"
-                                                ? "Deliveries"
-                                                : "Announcements"
+                                        : activeTab === "orders"
+                                          ? "Orders"
+                                          : activeTab === "users"
+                                            ? "User Management"
+                                            : activeTab === "promos"
+                                              ? "Promo Codes"
+                                              : activeTab === "products"
+                                                ? "Products"
+                                                : activeTab === "deliveries"
+                                                  ? "Deliveries"
+                                                  : "Announcements"
                                 }}
                             </h2>
                             <p class="text-slate-400 font-medium text-sm">Welcome back, Chief! ☕</p>
@@ -766,6 +771,14 @@ const tabs = [
                         class="animate-in fade-in slide-in-from-bottom-4"
                     >
                         <ProductsPanel />
+                    </div>
+
+                    <!-- Orders Tab -->
+                    <div
+                        v-else-if="activeTab === 'orders'"
+                        class="animate-in fade-in slide-in-from-bottom-4"
+                    >
+                        <OrdersPanel />
                     </div>
 
                     <!-- Deliveries Tab -->

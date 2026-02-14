@@ -23,9 +23,6 @@ import {
     Clock,
     Gift,
     Cloud,
-    Zap,
-    CreditCard,
-    TrendingUp,
     History,
     Sparkles,
     LogOut,
@@ -37,7 +34,7 @@ import { useRouter } from "vue-router";
 import skykidMoth from "../assets/moth.gif";
 import skykidWebm from "../assets/skykid.webm";
 import skykidMp4 from "../assets/skykid.mp4";
-import { formatRupiah } from "../utils/format";
+
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -87,6 +84,8 @@ const filteredProducts = computed(() => {
     if (activeCategory.value === "all") return list;
     return list.filter((p) => p.category === activeCategory.value);
 });
+
+
 const scrollToServices = () => {
     document.getElementById("services").scrollIntoView({ behavior: "smooth" });
 };
@@ -116,7 +115,7 @@ const handleTopUp = () => {
     router.push("/top-up");
 };
 const handleJoinMember = () => {
-    router.push("/join-member");
+    router.push("/join");
 };
 
 // LOGOUT WITH ALERT
@@ -144,28 +143,32 @@ const categories = [
 
 const steps = [
     {
-        title: "1. Pilih Paket",
+        title: "Pilih Paket",
         desc: "Pilih produk yang kamu mau.",
         icon: Sparkles,
         color: "text-sky-500 bg-sky-100 dark:bg-sky-900/30",
+        emoji: "🛒",
     },
     {
-        title: "2. Kirim Data",
+        title: "Kirim Data",
         desc: "Login via Link/QR (Aman 100%).",
         icon: Lock,
         color: "text-rose-500 bg-rose-100 dark:bg-rose-900/30",
+        emoji: "🔐",
     },
     {
-        title: "3. Proses Joki",
+        title: "Proses Joki",
         desc: "Admin mengerjakan pesanan.",
         icon: Clock,
         color: "text-amber-500 bg-amber-100 dark:bg-amber-900/30",
+        emoji: "⚡",
     },
     {
-        title: "4. Selesai!",
+        title: "Selesai!",
         desc: "Terima bukti & bisa login lagi.",
         icon: CheckCircle2,
         color: "text-emerald-500 bg-emerald-100 dark:bg-emerald-900/30",
+        emoji: "🎉",
     },
 ];
 
@@ -173,30 +176,36 @@ const faqs = [
     {
         q: "Apakah akun saya aman?",
         a: "Aman 100%! Kita pakai login via Link/QR Nintendo/Playstation. Gak perlu password email utama.",
+        emoji: "🔒",
     },
     {
         q: "Metode login apa saja?",
         a: "Google, Nintendo, PS, Huawei, FB, Apple ID, Email.",
+        emoji: "📱",
     },
     {
         q: "Lama pengerjaan CR?",
         a: "Full Run 1.5 - 2 jam. CR Kilat lebih cepat.",
+        emoji: "⏰",
     },
     {
         q: "Heart dikirim instant?",
         a: "Limit 1 heart/akun/hari. 10 heart pakai 5 bot = 2 hari.",
+        emoji: "💖",
     },
 ];
 </script>
 
 <template>
     <div class="overflow-x-hidden">
+        <!-- UX: Hero section optimized for mobile-first - fits single viewport -->
         <section
             id="home"
-            class="pt-24 pb-12 md:pt-36 md:pb-20 px-6 relative overflow-hidden bg-cream dark:bg-charcoal transition-colors duration-500"
+            class="pt-20 pb-8 md:pt-36 md:pb-20 px-4 md:px-6 relative overflow-hidden bg-cream dark:bg-charcoal transition-colors duration-500"
         >
+            <!-- UX: Decorative clouds hidden on mobile to reduce visual noise -->
             <div
-                class="absolute top-0 right-0 w-full h-full pointer-events-none overflow-hidden"
+                class="absolute top-0 right-0 w-full h-full pointer-events-none overflow-hidden hidden md:block"
             >
                 <Cloud
                     :size="120"
@@ -358,15 +367,16 @@ const faqs = [
                         </div>
                     </div>
 
-                    <div v-else class="space-y-6">
+                    <!-- UX: Mobile-first guest hero - compact, focused on quick action -->
+                    <div v-else class="space-y-4 md:space-y-6">
                         <div
-                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sky-500 dark:text-sky-400 text-[10px] md:text-xs font-bold shadow-sm animate-bounce-slow"
+                            class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white dark:bg-slate-800 border border-sky-100 dark:border-slate-700 text-sky-500 dark:text-sky-400 text-xs font-bold shadow-sm"
                         >
                             <Sparkles :size="14" class="text-amber-400" />
                             <span>Jasa Joki Terpercaya</span>
                         </div>
                         <h1
-                            class="text-3xl md:text-6xl font-black text-slate-800 dark:text-slate-100 leading-tight"
+                            class="text-2xl md:text-6xl font-black text-slate-800 dark:text-slate-100 leading-tight"
                         >
                             Kamu Rebahan,<br />
                             <span
@@ -374,24 +384,25 @@ const faqs = [
                                 >Aiya yang Lariin</span
                             >
                         </h1>
+                        <!-- UX: Short value proposition - one line on mobile -->
                         <p
-                            class="text-sm md:text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed max-w-lg mx-auto md:mx-0"
+                            class="text-sm md:text-lg text-slate-500 dark:text-slate-400 font-medium leading-relaxed"
                         >
-                            Fokus ke momen seru bareng friends. Urusan grinding
-                            serahin ke ahlinya.
+                            Urusan grinding serahin ke ahlinya ✨
                         </p>
+                        <!-- UX: Two primary CTAs only, 44px+ touch targets -->
                         <div
-                            class="flex flex-col gap-3 justify-center md:justify-start pt-2"
+                            class="flex flex-col gap-3 justify-center md:justify-start pt-1"
                         >
                             <button
                                 @click="scrollToServices"
-                                class="btn-bouncy px-8 py-3.5 bg-gradient-to-r from-sky-500 to-cyan-500 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 text-sm md:text-base"
+                                class="btn-bouncy w-full md:w-auto px-8 py-3.5 min-h-[44px] bg-gradient-to-r from-sky-500 to-cyan-500 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 text-base"
                             >
                                 Lihat Menu Jajan <ChevronRight :size="18" />
                             </button>
                             <button
                                 @click="handleJoinMember"
-                                class="px-8 py-3.5 bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-slate-700 rounded-xl font-bold transition flex items-center justify-center gap-2 text-sm md:text-base"
+                                class="w-full md:w-auto px-8 py-3.5 min-h-[44px] bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-slate-700 rounded-xl font-bold transition flex items-center justify-center gap-2 text-base"
                             >
                                 <Crown :size="18" /> Join Member
                             </button>
@@ -401,55 +412,99 @@ const faqs = [
             </div>
         </section>
 
+        <!-- Wave divider hero → steps -->
+        <div v-if="!userStore.user" class="relative -mt-1">
+            <svg viewBox="0 0 1440 50" class="w-full h-auto fill-white dark:fill-charcoal" preserveAspectRatio="none">
+                <path d="M0,50 L0,20 Q360,0 720,25 Q1080,50 1440,20 L1440,50 Z" />
+            </svg>
+        </div>
+
+        <!-- ===== HOW IT WORKS (Timeline) ===== -->
         <section
             v-if="!userStore.user"
-            class="py-12 px-6 bg-white dark:bg-charcoal border-y border-slate-100 dark:border-slate-800"
+            class="py-10 md:py-14 px-6 bg-white dark:bg-charcoal relative overflow-hidden"
         >
-            <div class="container mx-auto max-w-6xl">
-                <div class="text-center mb-8">
-                    <h2
-                        class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2"
-                    >
-                        Cara Order Anti Ribet
+            <!-- Floating decorations -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <span class="absolute top-6 left-[8%] text-sky-200/20 dark:text-white/5 text-2xl animate-float-slow">☁️</span>
+                <span class="absolute bottom-8 right-[12%] text-amber-200/20 dark:text-amber-500/5 text-lg animate-float-fast">✨</span>
+            </div>
+
+            <div class="container mx-auto max-w-3xl relative z-10">
+                <div class="text-center mb-10">
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-50 dark:bg-sky-900/10 border border-sky-100 dark:border-sky-800/20 text-sky-500 text-xs font-bold mb-3">
+                        <Sparkles :size="12" /> Super Gampang
+                    </div>
+                    <h2 class="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">
+                        Cara Order Anti Ribet ✌️
                     </h2>
-                    <p
-                        class="text-xs md:text-sm text-slate-500 dark:text-slate-400"
-                    >
+                    <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400">
                         Pesan joki semudah update status.
                     </p>
                 </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div
-                        v-for="(step, i) in steps"
-                        :key="i"
-                        class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl text-center border border-slate-100 dark:border-slate-700"
-                    >
+
+                <!-- Timeline -->
+                <div class="relative">
+                    <!-- Connecting line (vertical on mobile, horizontal on desktop) -->
+                    <div class="hidden md:block absolute top-7 left-[12%] right-[12%] h-0.5 border-t-2 border-dashed border-slate-200 dark:border-slate-700 z-0"></div>
+                    <div class="md:hidden absolute top-0 bottom-0 left-7 w-0.5 border-l-2 border-dashed border-slate-200 dark:border-slate-700 z-0"></div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 md:gap-4 relative z-10">
                         <div
-                            class="w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-3"
-                            :class="step.color"
+                            v-for="(step, i) in steps"
+                            :key="i"
+                            class="step-item flex md:flex-col items-start md:items-center gap-4 md:gap-2 text-left md:text-center"
+                            :style="{ animationDelay: `${i * 150}ms` }"
                         >
-                            <component :is="step.icon" :size="20" />
+                            <!-- Step circle -->
+                            <div class="relative shrink-0">
+                                <div
+                                    class="w-14 h-14 rounded-2xl flex items-center justify-center border-2 border-white dark:border-charcoal shadow-md bg-white dark:bg-slate-800 step-icon-float"
+                                >
+                                    <span class="text-xl">{{ step.emoji }}</span>
+                                </div>
+                                <!-- Step number -->
+                                <div
+                                    class="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black text-white shadow-sm"
+                                    :class="step.color.split(' ')[1]"
+                                >
+                                    {{ i + 1 }}
+                                </div>
+                            </div>
+
+                            <div class="md:mt-2">
+                                <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-0.5">
+                                    {{ step.title }}
+                                </h3>
+                                <p class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                                    {{ step.desc }}
+                                </p>
+                            </div>
                         </div>
-                        <h3
-                            class="font-bold text-slate-800 dark:text-slate-200 text-sm mb-1"
-                        >
-                            {{ step.title }}
-                        </h3>
-                        <p
-                            class="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 leading-snug"
-                        >
-                            {{ step.desc }}
-                        </p>
                     </div>
                 </div>
             </div>
         </section>
 
+        <!-- Wave divider steps → services -->
+        <div class="relative -mb-1">
+            <svg viewBox="0 0 1440 50" class="w-full h-auto" preserveAspectRatio="none">
+                <path d="M0,0 L0,30 Q360,50 720,25 Q1080,0 1440,30 L1440,0 Z" :class="!userStore.user ? 'fill-white dark:fill-charcoal' : 'fill-cream dark:fill-charcoal'" />
+            </svg>
+        </div>
+
+        <!-- ===== PRODUCTS / MENU JAJAN ===== -->
         <section
             id="services"
-            class="py-12 md:py-24 px-4 md:px-6 bg-slate-50/50 dark:bg-slate-900/30"
+            class="py-10 md:py-24 px-4 md:px-6 bg-gradient-to-b from-slate-50/80 via-white/30 to-cream dark:from-slate-900/30 dark:via-charcoal dark:to-charcoal relative overflow-hidden"
         >
-            <div class="container mx-auto max-w-6xl">
+            <!-- Floating decoration -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <span class="absolute top-12 right-[8%] text-rose-200/15 dark:text-rose-500/5 text-3xl animate-float-slow" style="animation-delay: 1s">❤️</span>
+                <span class="absolute bottom-20 left-[5%] text-sky-200/15 dark:text-white/5 text-2xl animate-float-fast">☁️</span>
+            </div>
+
+            <div class="container mx-auto max-w-6xl relative z-10">
                 <div class="text-center mb-8 relative">
                     <h2
                         class="text-2xl md:text-4xl font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center justify-center gap-2"
@@ -473,6 +528,7 @@ const faqs = [
                     </p>
                 </div>
 
+                <!-- Category pills with icons -->
                 <div
                     class="flex justify-start md:justify-center gap-2 mb-8 overflow-x-auto pb-2 px-2 snap-x"
                 >
@@ -480,13 +536,14 @@ const faqs = [
                         v-for="cat in categories"
                         :key="cat.id"
                         @click="activeCategory = cat.id"
-                        class="snap-center shrink-0 px-4 py-2 rounded-full text-xs md:text-sm font-bold border transition-all"
+                        class="snap-center shrink-0 px-4 py-2.5 rounded-full text-xs md:text-sm font-bold border transition-all duration-300 flex items-center gap-1.5 cat-pill"
                         :class="
                             activeCategory === cat.id
-                                ? 'bg-sky-500 text-white border-sky-500 shadow-md'
-                                : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'
+                                ? 'bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-200/40 dark:shadow-none scale-105'
+                                : 'bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-sky-200 dark:hover:border-sky-800'
                         "
                     >
+                        <component :is="cat.icon" :size="14" :class="activeCategory === cat.id ? 'text-white' : 'text-slate-400'" />
                         {{ cat.label }}
                     </button>
                 </div>
@@ -510,73 +567,106 @@ const faqs = [
             </div>
         </section>
 
+        <!-- Wave divider products → FAQ -->
+        <div class="relative -mt-1">
+            <svg viewBox="0 0 1440 50" class="w-full h-auto fill-cream dark:fill-charcoal" preserveAspectRatio="none">
+                <path d="M0,50 L0,25 Q240,0 480,30 Q720,55 960,20 Q1200,-5 1440,25 L1440,50 Z" />
+            </svg>
+        </div>
+
+        <!-- ===== FAQ SECTION ===== -->
         <section
-            class="py-12 px-6 bg-white dark:bg-charcoal border-t border-slate-100 dark:border-slate-800"
+            class="py-12 px-6 bg-gradient-to-b from-cream to-amber-50/30 dark:from-charcoal dark:to-slate-950/50 relative overflow-hidden"
         >
-            <div class="container mx-auto max-w-3xl">
+            <!-- Playful background dots pattern -->
+            <div class="absolute inset-0 pointer-events-none overflow-hidden">
+                <span class="absolute top-10 left-[15%] text-amber-200/20 dark:text-amber-800/10 text-xl animate-float-slow">✦</span>
+                <span class="absolute top-1/3 right-[10%] text-rose-200/15 dark:text-rose-800/10 text-2xl animate-float-fast" style="animation-delay: 2s">❤️</span>
+                <span class="absolute bottom-16 left-[8%] text-sky-200/15 dark:text-sky-800/10 text-lg animate-float-slow" style="animation-delay: 1s">☁️</span>
+            </div>
+
+            <div class="container mx-auto max-w-3xl relative z-10">
                 <div class="text-center mb-8">
-                    <div
-                        class="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-rose-100 dark:bg-rose-900/20 text-rose-500 rounded-2xl mb-3 rotate-6 shadow-sm"
-                    >
-                        <HelpCircle :size="20" class="md:w-6 md:h-6" />
+                    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/20 text-rose-500 text-xs font-bold mb-3">
+                        <HelpCircle :size="12" /> FAQ
                     </div>
                     <h2
                         class="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100"
                     >
-                        Punya Pertanyaan?
+                        Punya Pertanyaan? 🤔
                     </h2>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Jawaban buat pertanyaan yang sering ditanya</p>
                 </div>
                 <div class="space-y-3">
                     <div
                         v-for="(faq, i) in faqs"
                         :key="i"
-                        class="border rounded-2xl overflow-hidden transition-all duration-300"
+                        class="faq-card border rounded-2xl overflow-hidden transition-all duration-300"
                         :class="
                             activeFaqIndex === i
-                                ? 'border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-900/10'
-                                : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900'
+                                ? 'border-sky-200 dark:border-sky-900 bg-sky-50/80 dark:bg-sky-900/10 shadow-md shadow-sky-100/30 dark:shadow-none'
+                                : 'border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-sm'
                         "
                     >
                         <button
                             @click="
                                 activeFaqIndex = activeFaqIndex === i ? null : i
                             "
-                            class="w-full flex justify-between items-center p-4 md:p-5 text-left font-bold text-slate-700 dark:text-slate-200 transition"
+                            class="w-full flex justify-between items-center p-4 md:p-5 text-left font-bold text-slate-700 dark:text-slate-200 transition group"
                         >
-                            <span class="flex-1 pr-4 text-sm md:text-base">{{
-                                faq.q
-                            }}</span
-                            ><ChevronDown
+                            <span class="flex items-center gap-2.5 flex-1 pr-4 text-sm md:text-base">
+                                <span class="text-lg shrink-0 group-hover:scale-110 transition-transform duration-200">{{ faq.emoji }}</span>
+                                {{ faq.q }}
+                            </span>
+                            <ChevronDown
                                 :size="18"
                                 :class="{
                                     'rotate-180 text-sky-500':
                                         activeFaqIndex === i,
                                 }"
-                                class="transition-transform duration-300 text-slate-400"
+                                class="shrink-0 transition-transform duration-300 text-slate-400"
                             />
                         </button>
-                        <div
-                            v-show="activeFaqIndex === i"
-                            class="p-4 pt-0 text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-dashed border-sky-200 dark:border-sky-900 mt-2"
-                        >
-                            {{ faq.a }}
-                        </div>
+                        <transition name="faq-expand">
+                            <div
+                                v-if="activeFaqIndex === i"
+                                class="px-4 pb-4 text-xs md:text-sm text-slate-600 dark:text-slate-400 leading-relaxed border-t border-dashed border-sky-200/60 dark:border-sky-900/40 pt-3 ml-10"
+                            >
+                                {{ faq.a }}
+                            </div>
+                        </transition>
                     </div>
                 </div>
+
+                <!-- WhatsApp CTA (more prominent) -->
                 <div
-                    class="mt-8 text-center bg-slate-50 dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700"
+                    class="mt-10 text-center relative"
                 >
-                    <p
-                        class="text-slate-500 dark:text-slate-400 mb-4 font-medium text-xs md:text-sm"
-                    >
-                        Masih ragu atau punya request khusus?
-                    </p>
-                    <a
-                        href="https://wa.me/6285942963323"
-                        target="_blank"
-                        class="inline-flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-200 dark:shadow-none transition btn-bouncy text-sm"
-                        ><MessageCircle :size="18" /> Chat via WhatsApp</a
-                    >
+                    <div class="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-green-50 via-emerald-50/60 to-teal-50/40 dark:from-emerald-950/20 dark:via-green-950/10 dark:to-charcoal border border-green-100/60 dark:border-green-800/20 shadow-lg shadow-green-100/20 dark:shadow-none">
+                        <!-- Glow ring behind -->
+                        <div class="absolute inset-0 rounded-3xl bg-green-400/5 dark:bg-green-500/5 blur-xl pointer-events-none"></div>
+                        
+                        <div class="relative z-10">
+                            <div class="inline-flex items-center justify-center w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-2xl mb-3 text-green-500 rotate-3">
+                                <MessageCircle :size="24" />
+                            </div>
+                            <p class="text-slate-600 dark:text-slate-300 mb-1 font-bold text-sm md:text-base">
+                                Masih ragu atau punya request khusus?
+                            </p>
+                            <p class="text-slate-400 dark:text-slate-500 mb-5 text-xs">
+                                Join channel kami untuk info & update terbaru ⚡
+                            </p>
+                            <a
+                                href="https://whatsapp.com/channel/0029VbCf7UM5Ejy7XKh8Z31u"
+                                target="_blank"
+                                class="inline-flex items-center gap-2 px-7 py-3.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-green-200/50 dark:shadow-none transition-all duration-300 btn-bouncy text-sm group"
+                            >
+                                <MessageCircle :size="18" class="group-hover:rotate-12 transition-transform" />
+                                Join Channel WhatsApp
+                                <ChevronRight :size="14" class="opacity-60 group-hover:translate-x-0.5 transition-transform" />
+                            </a>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -675,52 +765,82 @@ const faqs = [
     opacity: 0;
 }
 @keyframes spin-slow {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 @keyframes spin-reverse-slow {
-    0% {
-        transform: rotate(360deg);
-    }
-    100% {
-        transform: rotate(0deg);
-    }
+    0% { transform: rotate(360deg); }
+    100% { transform: rotate(0deg); }
 }
 @keyframes pulse-slow {
-    0%,
-    100% {
-        opacity: 0.2;
-        transform: scale(1);
-    }
-    50% {
-        opacity: 0.4;
-        transform: scale(1.1);
-    }
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.1); }
 }
 @keyframes float-particle {
-    0% {
-        transform: translateY(0) scale(0.8);
-        opacity: 0;
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(-30px) scale(1.2);
-        opacity: 0;
-    }
+    0% { transform: translateY(0) scale(0.8); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateY(-30px) scale(1.2); opacity: 0; }
 }
 @keyframes float {
-    0%,
-    100% {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-15px); }
+}
+
+/* ===== STEP TIMELINE ANIMATIONS ===== */
+.step-item {
+    animation: step-appear 0.5s ease both;
+}
+@keyframes step-appear {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
         transform: translateY(0);
     }
-    50% {
-        transform: translateY(-15px);
+}
+
+.step-icon-float {
+    animation: step-float 3s ease-in-out infinite;
+}
+@keyframes step-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+}
+
+/* ===== FAQ ANIMATIONS ===== */
+.faq-card {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.faq-card:active {
+    transform: scale(0.98);
+}
+
+.faq-expand-enter-active {
+    animation: faq-slide-down 0.3s ease;
+}
+.faq-expand-leave-active {
+    animation: faq-slide-down 0.2s ease reverse;
+}
+@keyframes faq-slide-down {
+    from {
+        opacity: 0;
+        max-height: 0;
+        transform: translateY(-8px);
     }
+    to {
+        opacity: 1;
+        max-height: 200px;
+        transform: translateY(0);
+    }
+}
+
+/* ===== CATEGORY PILL BOUNCE ===== */
+.cat-pill {
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.cat-pill:active {
+    transform: scale(0.93);
 }
 </style>
