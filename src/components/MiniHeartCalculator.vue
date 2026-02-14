@@ -39,6 +39,14 @@ const presets = [
 const pricePerHeart = computed(() => config.value.pricePerHeart ?? 100);
 const formatCurrency = formatRupiah;
 
+const quickPicks = computed(() => Array.isArray(config.value.quickPicks) ? config.value.quickPicks : []);
+
+// Helper to check if current amount matches a quick pick
+const matchedQuickPick = computed(() => {
+    if (!isInstant.value) return null;
+    return quickPicks.value.find(qp => qp.amount === heartCount.value);
+});
+
 /* ─────────────────────────────────────────────────────────────
    BONUS LOGIC (unchanged)
 ───────────────────────────────────────────────────────────── */
@@ -51,7 +59,16 @@ const bonusHearts = computed(() => {
 const totalHeartsWithBonus = computed(
     () => heartCount.value + bonusHearts.value,
 );
-const totalPrice = computed(() => heartCount.value * pricePerHeart.value);
+
+// Smart Price Calculation
+const totalPrice = computed(() => {
+    // If instant AND matches a quick pick bundle, use bundle price
+    if (isInstant.value && matchedQuickPick.value) {
+        return matchedQuickPick.value.price;
+    }
+    // Fallback to unit price calculation
+    return heartCount.value * pricePerHeart.value;
+});
 
 const estimatedDays = computed(() => {
     if (isInstant.value) return 0;
@@ -107,7 +124,14 @@ const handleAddToCart = () => {
 
     // Technical description for admin/checkout
     const descDaily = `Total: ${totalHeartsWithBonus.value} Heart • Via ${slots.value} Bot • Est. ${estimatedDays.value} Hari`;
-    const descInstant = `Total: ${heartCount.value} Heart • INSTANT Delivery • No Bonus`;
+    
+    // For Instant, check if it's a package or custom
+    let descInstant = `Total: ${heartCount.value} Heart • INSTANT Delivery`;
+    if (matchedQuickPick.value) {
+        descInstant += ` • Paket Hemat`;
+    } else {
+        descInstant += ` • Custom Amount`;
+    }
 
     emit("addToCart", {
         ...props.product,
@@ -123,6 +147,7 @@ const handleAddToCart = () => {
             ? [
                   { name: "Jumlah", value: heartCount.value },
                   { name: "Metode", value: "Instant Trade" },
+                  ...(matchedQuickPick.value ? [{ name: "Tipe", value: "Paket Hemat" }] : [])
               ]
             : [
                   { name: "Jumlah", value: heartCount.value },
@@ -137,9 +162,9 @@ const sliderProgress = computed(() => {
     return ((slots.value - minSlots.value) / (maxSlots.value - minSlots.value)) * 100;
 });
 
-// Quick preset buttons for hearts
+// Quick preset buttons for hearts (Standard Mode only)
 const heartPresets = computed(() => {
-    const base = [50, 100, 200, 500];
+    const base = [10, 20, 30, 50, 100, 150, 200, 300, 500, 1000];
     return base.filter(v => v >= minHearts.value && v <= maxHearts.value);
 });
 </script>
@@ -159,52 +184,129 @@ const heartPresets = computed(() => {
                 </label>
             </div>
 
-            <!-- Quantity Stepper -->
-            <div class="flex items-center gap-3 mb-4">
-                <!-- Minus -->
-                <button
-                    @click="decreaseHearts"
-                    :disabled="heartCount <= minHearts"
-                    class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:border-rose-200 dark:hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-all active:scale-90 shadow-sm"
-                >
-                    <Minus :size="18" stroke-width="2.5" />
-                </button>
+            <!-- CASE A: Not Instant (Standard Stepper + Input) -->
+            <div v-if="!isInstant">
+                <!-- Quantity Stepper -->
+                <div class="flex items-center gap-3 mb-4">
+                    <!-- Minus -->
+                    <button
+                        @click="decreaseHearts"
+                        :disabled="heartCount <= minHearts"
+                        class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:border-rose-200 dark:hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-all active:scale-90 shadow-sm"
+                    >
+                        <Minus :size="18" stroke-width="2.5" />
+                    </button>
 
-                <!-- Number Input -->
-                <div class="flex-1 relative">
-                    <input
-                        type="number"
-                        :value="heartCount"
-                        @input="handleInput"
-                        @blur="handleBlur"
-                        class="w-full text-center text-3xl font-black bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none border-2 border-slate-200/60 dark:border-slate-700/40 focus:border-rose-300 dark:focus:border-rose-500/40 no-arrow tracking-tight py-3 rounded-xl transition-colors shadow-sm"
-                    />
-                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-300 dark:text-slate-600 pointer-events-none">❤️</span>
+                    <!-- Number Input -->
+                    <div class="flex-1 relative">
+                        <input
+                            type="number"
+                            :value="heartCount"
+                            @input="handleInput"
+                            @blur="handleBlur"
+                            class="w-full text-center text-3xl font-black bg-white dark:bg-slate-800 text-slate-800 dark:text-white focus:outline-none border-2 border-slate-200/60 dark:border-slate-700/40 focus:border-rose-300 dark:focus:border-rose-500/40 no-arrow tracking-tight py-3 rounded-xl transition-colors shadow-sm"
+                        />
+                        <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-300 dark:text-slate-600 pointer-events-none">❤️</span>
+                    </div>
+
+                    <!-- Plus -->
+                    <button
+                        @click="increaseHearts"
+                        :disabled="heartCount >= maxHearts"
+                        class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:border-rose-200 dark:hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-all active:scale-90 shadow-sm"
+                    >
+                        <Plus :size="18" stroke-width="2.5" />
+                    </button>
                 </div>
 
-                <!-- Plus -->
-                <button
-                    @click="increaseHearts"
-                    :disabled="heartCount >= maxHearts"
-                    class="shrink-0 w-11 h-11 rounded-xl flex items-center justify-center bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/40 text-slate-500 dark:text-slate-400 hover:bg-rose-50 hover:border-rose-200 dark:hover:bg-slate-700 disabled:opacity-25 disabled:cursor-not-allowed transition-all active:scale-90 shadow-sm"
-                >
-                    <Plus :size="18" stroke-width="2.5" />
-                </button>
+                <!-- Quick Presets (Heart Amount) -->
+                <div class="flex gap-2 text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">
+                    Jalan Tikus:
+                </div>
+                <div class="flex gap-2">
+                    <button
+                        v-for="preset in [50, 100, 200, 500].filter(v => v >= minHearts && v <= maxHearts)"
+                        :key="preset"
+                        @click="heartCount = preset"
+                        class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
+                        :class="heartCount === preset
+                            ? 'bg-rose-500 text-white shadow-sm shadow-rose-200/60 dark:shadow-none'
+                            : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/40 hover:border-rose-200 dark:hover:border-rose-500/30'"
+                    >
+                        {{ preset }}
+                    </button>
+                </div>
             </div>
 
-            <!-- Quick Presets (Heart Amount) -->
-            <div class="flex gap-2">
-                <button
-                    v-for="preset in heartPresets"
-                    :key="preset"
-                    @click="heartCount = preset"
-                    class="flex-1 py-2 rounded-lg text-xs font-bold transition-all duration-200 active:scale-95"
-                    :class="heartCount === preset
-                        ? 'bg-rose-500 text-white shadow-sm shadow-rose-200/60 dark:shadow-none'
-                        : 'bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-slate-700/40 hover:border-rose-200 dark:hover:border-rose-500/30'"
-                >
-                    {{ preset }}
-                </button>
+            <!-- CASE B: Instant (Hybrid: Custom Input + Quick Picks Grid) -->
+            <div v-else class="space-y-6">
+                <!-- Custom Input Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                            Custom / Satuan
+                        </label>
+                        <span class="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                            {{ formatCurrency(pricePerHeart) }} / heart
+                        </span>
+                    </div>
+                    <div class="relative">
+                        <input
+                            type="number"
+                            v-model.number="heartCount"
+                            @blur="handleBlur"
+                            class="w-full pl-5 pr-12 py-3 rounded-xl bg-white dark:bg-slate-800 border-2 border-slate-200/60 dark:border-slate-700/40 focus:border-rose-400 dark:focus:border-rose-500/50 outline-none font-black text-xl text-slate-700 dark:text-slate-200 transition-colors shadow-sm"
+                            placeholder="Masukkan jumlah heart..."
+                        />
+                         <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">❤️</span>
+                    </div>
+                </div>
+
+                <!-- Quick Picks Grid -->
+                <div v-if="quickPicks.length > 0">
+                    <div class="flex items-center gap-2 mb-3">
+                         <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700/50"></div>
+                         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">ATAU PILIH PAKET HEMAT</span>
+                         <div class="h-px flex-1 bg-slate-200 dark:bg-slate-700/50"></div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <button
+                            v-for="(qp, idx) in quickPicks"
+                            :key="idx"
+                            @click="heartCount = qp.amount"
+                            class="relative p-3 rounded-xl border-2 transition-all duration-200 active:scale-[0.97] flex items-center justify-between gap-3 group overflow-hidden text-left"
+                            :class="heartCount === qp.amount
+                                ? 'bg-rose-50/90 dark:bg-rose-900/20 border-rose-300 dark:border-rose-500/50 shadow-md shadow-rose-100/50 dark:shadow-none'
+                                : 'bg-white dark:bg-slate-800/60 border-slate-100 dark:border-slate-700/40 hover:border-rose-200 dark:hover:border-rose-800/40'"
+                        >
+                            <div class="flex items-center gap-2">
+                                <div
+                                    class="w-8 h-8 rounded-full flex items-center justify-center transition-colors duration-300"
+                                    :class="heartCount === qp.amount ? 'bg-rose-100 text-rose-500' : 'bg-slate-50 dark:bg-slate-700 text-slate-400'"
+                                >
+                                    <Heart :size="14" :fill="heartCount === qp.amount ? 'currentColor' : 'none'" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <span
+                                        class="text-sm font-black tabular-nums transition-colors"
+                                        :class="heartCount === qp.amount ? 'text-rose-600 dark:text-rose-200' : 'text-slate-600 dark:text-slate-300'"
+                                    >
+                                        {{ qp.amount }} Heart
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 font-medium">
+                                        {{ formatCurrency(qp.price) }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <!-- Checkmark badge if selected -->
+                            <div v-if="heartCount === qp.amount" class="text-rose-500">
+                                <div class="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -354,11 +456,18 @@ const heartPresets = computed(() => {
                     </span>
                 </div>
 
-                <!-- Price per heart -->
+                <!-- Price per heart or Package Deal -->
                 <div class="flex justify-between text-xs">
-                    <span class="text-slate-400 dark:text-slate-500">Harga per heart</span>
+                    <span class="text-slate-400 dark:text-slate-500">
+                        {{ matchedQuickPick ? 'Tipe Harga' : 'Harga per heart' }}
+                    </span>
                     <span class="text-slate-400 dark:text-slate-500 tabular-nums">
-                        {{ formatCurrency(pricePerHeart) }}
+                        <span v-if="matchedQuickPick" class="text-rose-500 font-bold bg-rose-50 dark:bg-rose-900/30 px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">
+                            Paket Hemat
+                        </span>
+                        <span v-else>
+                            {{ formatCurrency(pricePerHeart) }}
+                        </span>
                     </span>
                 </div>
 

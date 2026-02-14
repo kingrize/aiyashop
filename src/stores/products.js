@@ -91,10 +91,11 @@ export const useProductsStore = defineStore("products", {
         const ref = doc(db, "products", p.id);
 
         // preserve createdAt
-        const existing = await getDoc(ref);
-        const createdAt = existing.exists()
-          ? existing.data().createdAt
-          : serverTimestamp();
+        const existingSnap = await getDoc(ref);
+        const existingData = existingSnap.exists() ? existingSnap.data() : null;
+
+        // If document exists and has createdAt, keep it. Otherwise use serverTimestamp.
+        const createdAt = existingData?.createdAt || serverTimestamp();
 
         await setDoc(
           ref,

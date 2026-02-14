@@ -49,7 +49,7 @@ const iconComponent = computed(() => {
 // Warna header dibuat sangat lembut agar menyatu dengan tema cream website.
 // Menggunakan opacity rendah dan warna pastel alih-alih gradient dominan.
 const theme = computed(() => {
-    const type = props.product.category;
+    const type = (props.product.category || '').toLowerCase().replace(/\s+/g, '');
 
     if (type === "heart" || props.product.isCalculator) {
         return {

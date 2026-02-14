@@ -1,980 +1,526 @@
 <script setup>
-import { ref, reactive, computed, onMounted, watch, toRaw } from "vue";
+import { onMounted, ref, reactive, computed, watch } from "vue";
 import { useProductsStore } from "../../stores/products";
-import { products as localProducts } from "../../data/products";
 import { formatRupiah } from "../../utils/format";
 import {
     Search,
     Plus,
-    Pencil,
-    Trash2,
-    X,
+    Filter,
     Package,
-    Sparkles,
-    Heart,
-    Flame,
+    Edit2,
+    Trash2,
+    Image as ImageIcon,
     Check,
-    Calculator,
-    MinusCircle,
+    X,
+    ChevronRight,
     Layers,
-    MoreHorizontal,
+    Settings,
+    UploadCloud,
+    Archive,
+    Calculator,
+    Database
 } from "lucide-vue-next";
+import { products as defaultProducts } from "../../data/products";
 
-/*
-  Performance-focused refactor notes (no visual/UX changes):
-  - Debounced search input to reduce computed recalculations during typing.
-  - Replaced repeated "if" logic for type -> icon/desc/tag with frozen maps for faster lookups.
-  - Avoided recreating arrays/objects where possible.
-  - Removed unused imports (keeps bundle smaller).
-  - Kept store fallbacks intact from previous fix but minimized operations inside hot paths.
-*/
+const productStore = useProductsStore();
 
-const productsStore = useProductsStore();
-
-// UI state
-const searchInput = ref(""); // bound to input directly (debounced)
-const productSearch = ref(""); // debounced value used by computed filter
+// UI State
+const searchQuery = ref("");
+const activeFilter = ref("all");
 const showModal = ref(false);
-const editingProduct = ref(null);
-const showAdvanced = ref(false);
+const showDeleteConfirm = ref(false);
+const itemToDelete = ref(null);
+const activeTab = ref("info");
 
-// Form model
+// Form State
 const form = reactive({
-    type: "special",
-    name: "",
-    price: 0,
-    isActive: true,
-    order: 0,
     id: "",
+    type: "special", // special, dm, joki, instant-heart
+    name: "",
+    category: "Game",
+    price: 0,
     desc: "",
-    tag: "",
-    iconType: "",
-    isCalculator: false,
-    variants: [],
+    stock: 0,
+    isActive: true,
+    isPopular: false,
+    isCalculator: false, // New Field
+    thumbnail: "",
+    features: [],
+    variants: [], 
+    config: {}
 });
 
-// Debounce settings
-const DEBOUNCE_MS = 220;
-let debounceTimer = null;
-watch(
-    searchInput,
-    (v) => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-            productSearch.value = String(v || "")
-                .trim()
-                .toLowerCase();
-        }, DEBOUNCE_MS);
-    },
-    { immediate: true },
-);
-
-// Use frozen maps for type lookups (fast and stable)
-const ICON_BY_TYPE = Object.freeze({
-    heart: "heart",
-    candlerun: "flame",
-    calculator: "calculator",
-    special: "sparkles",
-});
-const DEFAULT_DESC_BY_TYPE = Object.freeze({
-    heart: "Cozy heart service ✨",
-    candlerun: "Warm & cozy candle run 🕯️",
-    calculator: "Custom Heart Calculation 🧮",
-    special: "Soft vibe service ☁️",
-});
-const DEFAULT_TAG_BY_TYPE = Object.freeze({
-    heart: "Cute pick ✨",
-    candlerun: "Warm & cozy 🕯️",
-    calculator: "Calculator 🧮",
-    special: "Soft vibe ☁️",
-});
-
-// Map type -> lucide component
-const TYPE_ICON_COMPONENT = Object.freeze({
-    heart: Heart,
-    candlerun: Flame,
-    calculator: Calculator,
-    special: Sparkles,
-});
-
-// Utility slugify (unchanged semantics)
-const slugify = (str) =>
-    String(str || "")
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .slice(0, 48);
-
-// Initial fetch
-onMounted(async () => {
-    if (productsStore.fetchAll) {
-        // pass fallback to allow offline/local mode
-        await productsStore.fetchAll({ fallback: localProducts });
+// Watch type to auto-enable calculator for instant-heart
+watch(() => form.type, (newVal) => {
+    if (!form.config) form.config = {};
+    if (newVal === 'instant-heart') {
+        form.isCalculator = true;
+        form.category = "Heart";
+        form.config.isInstant = true;
+    } else {
+        form.config.isInstant = false;
     }
 });
 
-// items computed - read store only once per render
-const items = computed(() => productsStore.items || productsStore.all || []);
-
-// filteredProducts: uses debounced productSearch (reduces churn while typing)
-const filteredProducts = computed(() => {
-    const q = productSearch.value;
-    let list = items.value || [];
-
-    // If query present, filter; otherwise use original list reference to avoid allocations
-    if (q) {
-        // small optimization: lowercasing fields once per product
-        list = list.filter((p) => {
-            // reading fields as strings once
-            const name = String(p.name || "").toLowerCase();
-            if (name.includes(q)) return true;
-            const id = String(p.id || "").toLowerCase();
-            if (id.includes(q)) return true;
-            const category = String(p.category || "").toLowerCase();
-            if (category.includes(q)) return true;
-            return false;
-        });
-    }
-
-    // Sort - stable and cheap relative to render cost; keep behavior identical
-    return [...list].sort((a, b) => {
-        const ao = Number(a.order ?? 9999);
-        const bo = Number(b.order ?? 9999);
-        if (ao !== bo) return ao - bo;
-        return String(a.name || "").localeCompare(String(b.name || ""));
-    });
-});
-
-// Variants helper
-const addVariant = () => form.variants.push({ name: "", price: 0 });
-const removeVariant = (index) => form.variants.splice(index, 1);
-
-// Modal actions (kept semantics identical)
-const openAdd = () => {
-    editingProduct.value = null;
-    showAdvanced.value = false;
+// Helper: Reset Form
+const resetForm = () => {
     Object.assign(form, {
-        type: "special",
-        name: "",
-        price: 0,
-        isActive: true,
-        order: filteredProducts.value.length + 1,
         id: "",
+        type: "seasonal",
+        name: "",
+        category: "Seasonal Pass",
+        price: 0,
         desc: "",
-        tag: "",
-        iconType: "",
+        stock: 99999,
+        isActive: true,
+        isPopular: false,
         isCalculator: false,
-        variants: [],
+        thumbnail: "",
+        features: ["Resmi & Legal", "Proses Cepat", "Garansi"],
+        variants: [], 
+        config: { formFields: [{ key: "userId", label: "User ID", type: "number", required: true }], pricePerHeart: 0, quickPicks: [] }
     });
+    activeTab.value = "info";
+};
+
+// Helper: Load Item to Form
+const editItem = (item) => {
+    resetForm();
+    const data = JSON.parse(JSON.stringify(item));
+    data.config = data.config || {};
+    if (!data.config.formFields) data.config.formFields = [{ key: "userId", label: "User ID", type: "number", required: true }];
+    if (!data.config.quickPicks) data.config.quickPicks = [];
+    if (!data.config.pricePerHeart) data.config.pricePerHeart = 0;
+    
+    Object.assign(form, data);
     showModal.value = true;
 };
 
-const openEdit = (p) => {
-    editingProduct.value = p;
-    showAdvanced.value = false;
-    const existingVariants = Array.isArray(p.variants)
-        ? p.variants.map((v) => ({ ...v }))
-        : [];
-    Object.assign(form, {
-        type: p.category || "special",
-        name: p.name || "",
-        price: Number(p.price || 0),
-        isActive: p.isActive !== false,
-        order: Number(p.order || 0),
-        id: p.id || "",
-        desc: p.desc || "",
-        tag: p.tag || "",
-        iconType: p.iconType || "",
-        isCalculator: p.isCalculator === true,
-        variants: existingVariants,
-    });
-    showModal.value = true;
-};
-
-const closeModal = () => (showModal.value = false);
-
-// refresh helper uses fetchAll if available
-const refresh = async () => {
-    if (productsStore.fetchAll)
-        await productsStore.fetchAll({ fallback: localProducts });
-};
-
-/*
-  Save logic:
-  - keep original validation and payload building
-  - use store.upsert when available
-  - otherwise fallback to modifying local arrays (minimal operations)
-*/
-const save = async () => {
-    const name = String(form.name || "").trim();
-    const price = Number(String(form.price ?? "").replace(/[^0-9]/g, "")) || 0;
-    const type = form.type;
-
-    if (!name) return alert("Nama produk wajib diisi.");
-    if (
-        (!price || price <= 0) &&
-        !form.isCalculator &&
-        form.variants.length === 0
-    )
-        return alert("Harga atau Varian harus diisi.");
-
-    const id =
-        editingProduct.value?.id ||
-        (showAdvanced.value && form.id?.trim()
-            ? form.id.trim()
-            : slugify(name));
-    if (!id) return alert("ID gagal dibuat.");
-
-    const base = editingProduct.value ? { ...editingProduct.value } : {};
-    const cleanVariants = form.variants
-        .map((v) => ({ name: v.name.trim(), price: Number(v.price || 0) }))
-        .filter((v) => v.name !== "");
-    const isCalc = type === "calculator" || form.isCalculator;
-
-    const payload = {
-        ...base,
-        id,
-        name,
-        price,
-        category: type,
-        isActive: !!form.isActive,
-        order: Number(form.order || 0),
-        isCalculator: isCalc,
-        variants: cleanVariants,
-        iconType:
-            showAdvanced.value && form.iconType?.trim()
-                ? form.iconType.trim()
-                : base.iconType || ICON_BY_TYPE[type] || ICON_BY_TYPE.special,
-        desc:
-            showAdvanced.value && form.desc?.trim()
-                ? form.desc.trim()
-                : base.desc ||
-                  DEFAULT_DESC_BY_TYPE[type] ||
-                  DEFAULT_DESC_BY_TYPE.special,
-        tag:
-            showAdvanced.value && form.tag?.trim()
-                ? form.tag.trim()
-                : base.tag ||
-                  DEFAULT_TAG_BY_TYPE[type] ||
-                  DEFAULT_TAG_BY_TYPE.special,
-        discountPrice: base.discountPrice ?? 0,
-        eta: base.eta ?? "",
-        singleSelection: base.singleSelection ?? false,
-        config:
-            base.config && typeof base.config === "object" ? base.config : {},
-    };
-
-    // call upsert or fallback; keep minimal mutations to reduce reactivity churn
-    let ok = true;
-    if (productsStore.upsert) {
-        ok = await productsStore.upsert(payload);
-    } else {
-        // fallback: try to upsert into items or all
-        try {
-            const listRef = productsStore.items || productsStore.all;
-            if (Array.isArray(listRef)) {
-                const idx = listRef.findIndex((x) => x.id === payload.id);
-                if (idx >= 0) {
-                    listRef.splice(idx, 1, payload);
-                } else {
-                    listRef.push(payload);
-                }
-            } else {
-                // assign a new array to trigger reactivity safely
-                productsStore.items = [...(productsStore.items || []), payload];
-            }
-            ok = true;
-        } catch (e) {
-            // keep behavior consistent with previous implementation
-            // eslint-disable-next-line no-console
-            console.error("Fallback upsert failed", e);
-            ok = false;
-        }
+// Actions
+const saveProduct = async () => {
+    if (!form.name || !form.price) return alert("Nama dan Harga wajib diisi!");
+    
+    // Auto ID generation
+    if (!form.id) {
+        const slug = form.name.toLowerCase().replace(/ /g, "-").replace(/[^\w-]+/g, "");
+        form.id = slug || `prod_${Date.now()}`;
     }
 
-    if (!ok) {
-        alert(
-            productsStore.error ||
-                "Gagal menyimpan produk. Cek permission / koneksi.",
-        );
-        return;
+    try {
+        await productStore.upsert({ ...form }); 
+        showModal.value = false;
+        resetForm();
+    } catch (e) {
+        alert("Gagal simpan: " + e.message);
+    }
+};
+
+const confirmDelete = (item) => {
+    itemToDelete.value = item;
+    showDeleteConfirm.value = true;
+};
+
+const deleteItem = async () => {
+    if (itemToDelete.value) {
+        await productStore.remove(itemToDelete.value.id);
+        showDeleteConfirm.value = false;
+        productStore.fetchAll(); // FIXED ACTION
+    }
+};
+
+const seedProducts = async () => {
+    if(!confirm("Sinkronkan produk default? Data dengan ID sama akan di-update.")) return;
+    await productStore.seed(defaultProducts);
+    alert("Produk berhasil disinkronkan dengan frontend!");
+};
+
+// Computed: Filtered List
+const filteredProducts = computed(() => {
+    let items = productStore.all || [];
+
+    if (activeFilter.value === "active") items = items.filter(i => i.isActive);
+    else if (activeFilter.value === "inactive") items = items.filter(i => !i.isActive);
+    else if (activeFilter.value !== "all") {
+        items = items.filter(i => i.category.toLowerCase().includes(activeFilter.value) || i.type.includes(activeFilter.value));
+    }
+    
+    if (searchQuery.value) {
+        const q = searchQuery.value.toLowerCase();
+        items = items.filter(i => i.name.toLowerCase().includes(q));
     }
 
-    await refresh();
-    closeModal();
+    return items;
+});
+
+// Form Helpers
+const addFeature = () => form.features.push("Fitur Baru");
+const removeFeature = (idx) => form.features.splice(idx, 1);
+
+const addVariant = () => {
+    form.variants.push({ id: `var_${Date.now()}`, name: "Varian Baru", price: 0 });
 };
+const removeVariant = (idx) => form.variants.splice(idx, 1);
 
-// Toggle active with store fallback
-const toggleActive = async (p) => {
-    if (productsStore.upsert) {
-        await productsStore.upsert({ ...p, isActive: !(p.isActive !== false) });
-    } else {
-        try {
-            const listRef = productsStore.items || productsStore.all;
-            if (Array.isArray(listRef)) {
-                const idx = listRef.findIndex((x) => x.id === p.id);
-                if (idx >= 0) {
-                    const copy = {
-                        ...listRef[idx],
-                        isActive: !(p.isActive !== false),
-                    };
-                    listRef.splice(idx, 1, copy);
-                }
-            } else {
-                productsStore.items = (productsStore.items || []).map((x) =>
-                    x.id === p.id
-                        ? { ...x, isActive: !(p.isActive !== false) }
-                        : x,
-                );
-            }
-        } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error("Fallback toggleActive failed", e);
-        }
-    }
-    await refresh();
+const addField = () => {
+    if(!form.config.formFields) form.config.formFields = [];
+    form.config.formFields.push({ key: "new_field", label: "Label", type: "text", required: true });
 };
+const removeField = (idx) => form.config.formFields.splice(idx, 1);
 
-// Remove with fallback
-const remove = async (p) => {
-    if (!confirm(`Hapus "${p.name}"?`)) return;
-    if (productsStore.remove) {
-        await productsStore.remove(p.id);
-    } else {
-        try {
-            const listRef = productsStore.items || productsStore.all;
-            if (Array.isArray(listRef)) {
-                const idx = listRef.findIndex((x) => x.id === p.id);
-                if (idx >= 0) listRef.splice(idx, 1);
-            } else {
-                productsStore.items = (productsStore.items || []).filter(
-                    (x) => x.id !== p.id,
-                );
-            }
-        } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error("Fallback remove failed", e);
-        }
-    }
-    await refresh();
-};
+onMounted(() => {
+    productStore.fetchAll({ fallback: defaultProducts });
+});
 
-// Seed with fallback
-const seed = async () => {
-    if (!confirm("Reset database?")) return;
-    if (productsStore.seed) {
-        await productsStore.seed(localProducts);
-    } else {
-        try {
-            if (Array.isArray(productsStore.items)) {
-                productsStore.items.splice(
-                    0,
-                    productsStore.items.length,
-                    ...localProducts,
-                );
-            } else if (Array.isArray(productsStore.all)) {
-                productsStore.all.splice(
-                    0,
-                    productsStore.all.length,
-                    ...localProducts,
-                );
-            } else {
-                productsStore.items = [...localProducts];
-            }
-        } catch (e) {
-            // eslint-disable-next-line no-console
-            console.error("Fallback seed failed", e);
-        }
-    }
-    await refresh();
-};
+// Constants
+const filters = [
+    { id: "all", label: "Semua" },
+    { id: "seasonal", label: "Seasonal Pass" },
+    { id: "candle", label: "Candle Run" },
+    { id: "heart", label: "Heart" },
+    { id: "bundle", label: "Bundles" },
+    { id: "cosmetic", label: "Cosmetics" },
+];
 
-// UI helpers (icons + colors - unchanged look)
-const TypeIcon = (type) =>
-    TYPE_ICON_COMPONENT[type] || TYPE_ICON_COMPONENT.special;
-
-const getCardGradient = (type) => {
-    if (type === "heart")
-        return "from-pink-500/10 to-rose-500/5 border-pink-200/50 dark:border-pink-500/20";
-    if (type === "candlerun")
-        return "from-orange-500/10 to-amber-500/5 border-orange-200/50 dark:border-orange-500/20";
-    if (type === "calculator")
-        return "from-indigo-500/10 to-violet-500/5 border-indigo-200/50 dark:border-indigo-500/20";
-    return "from-sky-500/10 to-blue-500/5 border-sky-200/50 dark:border-sky-500/20";
-};
-const getIconColor = (type) => {
-    if (type === "heart") return "text-pink-500";
-    if (type === "candlerun") return "text-orange-500";
-    if (type === "calculator") return "text-indigo-500";
-    return "text-sky-500";
-};
-// ====== UI helpers (Admin cards) ======
-const getGlowClass = (type) => {
-    if (type === "heart") return "bg-rose-300/50 dark:bg-rose-500/25";
-    if (type === "pass") return "bg-amber-200/60 dark:bg-amber-500/20";
-    if (type === "special") return "bg-violet-200/60 dark:bg-violet-500/20";
-    if (type === "calculator") return "bg-indigo-200/60 dark:bg-indigo-500/20";
-    return "bg-sky-200/60 dark:bg-sky-500/20";
-};
-
-const getBadgeClass = (type) => {
-    if (type === "heart")
-        return "bg-rose-500/10 text-rose-700 dark:text-rose-200 border-rose-300/40 dark:border-rose-500/30";
-    if (type === "pass")
-        return "bg-amber-500/10 text-amber-700 dark:text-amber-200 border-amber-300/40 dark:border-amber-500/30";
-    if (type === "special")
-        return "bg-violet-500/10 text-violet-700 dark:text-violet-200 border-violet-300/40 dark:border-violet-500/30";
-    if (type === "calculator")
-        return "bg-indigo-500/10 text-indigo-700 dark:text-indigo-200 border-indigo-300/40 dark:border-indigo-500/30";
-    return "bg-sky-500/10 text-sky-700 dark:text-sky-200 border-sky-300/40 dark:border-sky-500/30";
-};
-
-// Price helpers - left mostly the same, optimized small allocations
-const effectivePriceNumber = (p) => {
-    if (!p || p.isCalculator) return 0;
-
-    const discount = Number(p.discountPrice || 0);
-    if (discount > 0) return discount;
-
-    const base = Number(p.price || 0);
-    const variants = Array.isArray(p.variants) ? p.variants : [];
-    if (variants.length) {
-        // compute min once
-        const mapped = variants.map((v) => Number(v?.price || 0));
-        const finites = mapped.filter((n) => Number.isFinite(n) && n > 0);
-        if (finites.length) {
-            const minVar = Math.min(...finites);
-            if (Number.isFinite(minVar) && minVar > 0) return minVar;
-        }
-    }
-
-    return Number.isFinite(base) ? base : 0;
-};
-
-const priceText = (p) => {
-    if (!p) return formatRupiah(0);
-    if (p.isCalculator) return "Auto Calc";
-    return formatRupiah(effectivePriceNumber(p));
-};
+const modalTabs = [
+    { id: "info", label: "Info", icon: Package },
+    { id: "config", label: "Config", icon: Settings },
+    { id: "system", label: "System", icon: Layers },
+];
 </script>
 
 <template>
-    <div class="animate-in fade-in slide-in-from-bottom-6 pb-24">
-        <!-- HEADER -->
-        <div
-            class="sticky top-0 z-30 pt-2 pb-6 -mx-2 px-2 bg-gradient-to-b from-[#f8f9fd] via-[#f8f9fd]/95 to-transparent dark:from-[#0f172a] dark:via-[#0f172a]/95"
-        >
-            <div class="flex flex-col md:flex-row md:items-center gap-4">
-                <div class="flex-1 relative group">
-                    <div
-                        class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors"
-                    >
-                        <Search :size="18" stroke-width="2.5" />
-                    </div>
+    <div class="h-[calc(100vh-8rem)] lg:h-auto flex flex-col">
+        <!-- STICKY HEADER -->
+        <div class="sticky top-0 z-30 bg-[#f8fafc]/95 dark:bg-[#0b1120]/95 backdrop-blur-xl lg:static lg:bg-transparent pb-4">
+            
+            <div class="flex items-center gap-3 mb-4">
+                <div class="relative flex-1">
+                    <Search :size="18" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
-                        v-model="searchInput"
-                        placeholder="Search Sky Products..."
-                        class="w-full pl-12 pr-4 py-3.5 rounded-[1.5rem] bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200/60 dark:border-white/10 shadow-sm focus:ring-4 focus:ring-indigo-500/10 text-sm font-bold transition-all"
+                        v-model="searchQuery"
+                        type="text"
+                        placeholder="Cari produk..."
+                        class="w-full pl-11 pr-4 py-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/5 font-bold text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 transition shadow-sm"
                     />
                 </div>
-                <div class="flex gap-3">
-                    <button
-                        @click="seed"
-                        class="px-5 py-3.5 rounded-[1.5rem] bg-white/60 dark:bg-slate-800/60 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-500 hover:bg-white transition-all active:scale-95"
-                    >
-                        <Package :size="18" />
-                    </button>
-                    <button
-                        @click="openAdd"
-                        class="pl-4 pr-6 py-3.5 rounded-[1.5rem] bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 text-xs font-bold tracking-wide flex items-center gap-2 transition-all hover:-translate-y-0.5 active:scale-95"
-                    >
-                        <div class="bg-white/20 p-1 rounded-full">
-                            <Plus :size="14" stroke-width="3" />
+                <!-- Seed Button -->
+                <button @click="seedProducts" class="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-white/5 text-slate-400 hover:text-indigo-600 transition shadow-sm" title="Sync Default Products">
+                    <Database :size="18" />
+                </button>
+            </div>
+
+            <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2">
+                <button
+                    v-for="f in filters"
+                    :key="f.id"
+                    @click="activeFilter = f.id"
+                    class="px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wide whitespace-nowrap transition-all border"
+                    :class="activeFilter === f.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-500/30' : 'bg-white dark:bg-slate-900 text-slate-500 border-slate-200 dark:border-white/5'"
+                >
+                    {{ f.label }}
+                </button>
+            </div>
+        </div>
+
+        <!-- PRODUCTS LIST -->
+        <div class="flex-1 overflow-y-auto custom-scroll -mx-4 px-4 lg:mx-0 lg:px-0 pb-20 lg:pb-0">
+            <div v-if="filteredProducts.length === 0" class="flex flex-col items-center justify-center py-20 text-slate-400">
+                <Package :size="48" class="mb-4 opacity-50" stroke-width="1.5" />
+                <p class="font-bold">Tidak ada produk</p>
+            </div>
+
+            <div class="space-y-3">
+                <div
+                    v-for="item in filteredProducts"
+                    :key="item.id"
+                    @click="editItem(item)"
+                    class="group relative bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-white/5 shadow-sm active:scale-[0.99] transition-transform duration-200 flex items-center gap-4 cursor-pointer"
+                >
+                    <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0 flex items-center justify-center text-slate-400 relative">
+                        <Package :size="24" />
+                        <div class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900" :class="item.isActive ? 'bg-emerald-500' : 'bg-slate-400'"></div>
+                    </div>
+
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between">
+                            <h3 class="font-black text-slate-800 dark:text-white text-sm truncate pr-2 leading-tight">{{ item.name }}</h3>
+                            <div>
+                                <p v-if="item.variants && item.variants.length > 0" class="font-black text-indigo-600 dark:text-indigo-400 text-[10px] shrink-0 text-right">
+                                    Mulai {{ formatRupiah(Math.min(...item.variants.map(v => v.price))) }}
+                                </p>
+                                <p v-else class="font-black text-indigo-600 dark:text-indigo-400 text-sm shrink-0 text-right">
+                                    {{ formatRupiah(item.price) }}
+                                </p>
+                            </div>
                         </div>
-                        ADD NEW
-                    </button>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1 mb-1.5">{{ item.category }} • {{ item.type }}</p>
+                        
+                        <div class="flex items-center gap-3">
+                             <span v-if="item.isCalculator" class="inline-flex items-center gap-1 text-[10px] font-bold text-pink-500 bg-pink-50 dark:bg-pink-900/20 px-2 py-0.5 rounded-md">
+                                <Calculator :size="10" /> Heart Calc
+                            </span>
+                             <span v-if="item.variants && item.variants.length > 0" class="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded-md">
+                                <Layers :size="10" /> {{ item.variants.length }} Varian
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="w-8 h-8 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition shrink-0">
+                        <Edit2 :size="14" />
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- GRID -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            <div
-                v-for="p in filteredProducts"
-                :key="p.id"
-                class="group relative rounded-[2rem] border overflow-hidden p-5 sm:p-6 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-                :class="[
-                    'bg-gradient-to-br backdrop-blur-sm',
-                    getCardGradient(p.category),
-                    'bg-white/70 dark:bg-slate-900/60 border-slate-200/60 dark:border-white/10',
-                ]"
-            >
-                <!-- soft glow -->
-                <div
-                    class="pointer-events-none absolute -inset-12 opacity-40 blur-2xl"
-                    :class="getGlowClass(p.category)"
-                ></div>
-
-                <div
-                    class="relative z-10 flex items-start justify-between gap-3"
-                >
-                    <div class="flex items-start gap-3 min-w-0">
-                        <div class="relative shrink-0">
-                            <div
-                                class="w-12 h-12 rounded-2xl flex items-center justify-center border shadow-sm"
-                                :class="[
-                                    'bg-white/80 dark:bg-slate-900/40 border-slate-200/60 dark:border-white/10',
-                                ]"
-                            >
-                                <component
-                                    :is="TypeIcon(p.category)"
-                                    :size="22"
-                                    :class="getIconColor(p.category)"
-                                    stroke-width="2.5"
-                                />
-                            </div>
-                            <div
-                                class="absolute -right-1 -bottom-1 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-black border shadow-sm"
-                                :class="[
-                                    'bg-white/90 dark:bg-slate-900/70 border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-100',
-                                ]"
-                                title="Cute badge"
-                            >
-                                ✨
-                            </div>
-                        </div>
-
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span
-                                    class="px-2 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border"
-                                    :class="getBadgeClass(p.category)"
-                                >
-                                    {{ p.category }}
-                                </span>
-
-                                <span
-                                    v-if="p.isCalculator"
-                                    class="px-2 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-300/40 dark:border-indigo-500/30"
-                                >
-                                    CALC
-                                </span>
-
-                                <span
-                                    v-if="(p.variants || []).length"
-                                    class="px-2 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border bg-slate-900/5 dark:bg-white/10 text-slate-700 dark:text-slate-200 border-slate-200/60 dark:border-white/10"
-                                >
-                                    {{ (p.variants || []).length }} VAR
-                                </span>
-
-                                <span
-                                    v-if="p.isActive === false"
-                                    class="px-2 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border bg-slate-400/10 text-slate-600 dark:text-slate-300 border-slate-300/50 dark:border-white/10"
-                                >
-                                    PAUSED
-                                </span>
-                            </div>
-
-                            <h4
-                                class="mt-2 text-[15px] sm:text-[16px] font-black leading-snug line-clamp-2 text-slate-900 dark:text-white"
-                            >
-                                {{ p.name }}
-                            </h4>
-
-                            <p
-                                v-if="p.tag"
-                                class="mt-1 text-[11px] text-slate-600/80 dark:text-slate-300/80 line-clamp-1"
-                            >
-                                {{ p.tag }}
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- switch -->
-                    <button
-                        @click="toggleActive(p)"
-                        class="shrink-0 h-9 px-3 rounded-full font-black text-[11px] tracking-widest uppercase border transition-all active:scale-[0.98]"
-                        :class="
-                            p.isActive !== false
-                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300/40 dark:border-emerald-500/30 hover:bg-emerald-500/15'
-                                : 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-300/50 dark:border-white/10 hover:bg-slate-500/15'
-                        "
-                        title="Aktif / Pause"
-                    >
-                        {{ p.isActive !== false ? "Aktif" : "Pause" }}
-                    </button>
-                </div>
-
-                <div
-                    class="relative z-10 mt-5 flex items-end justify-between gap-3"
-                >
-                    <div class="min-w-0">
-                        <p
-                            class="text-[10px] font-black tracking-widest text-slate-400 uppercase"
-                        >
-                            Harga
-                        </p>
-
-                        <p
-                            class="mt-1 text-[20px] sm:text-[22px] font-black tabular-nums tracking-tight leading-none"
-                            :class="
-                                p.isActive !== false
-                                    ? 'text-slate-900 dark:text-white'
-                                    : 'text-slate-400 line-through'
-                            "
-                        >
-                            {{ priceText(p) }}
-                        </p>
-
-                        <p
-                            v-if="
-                                p.discountPrice && Number(p.discountPrice) > 0
-                            "
-                            class="mt-1 text-[11px] text-slate-400 line-through tabular-nums"
-                        >
-                            {{ formatRupiah(p.price || 0) }}
-                        </p>
-
-                        <p
-                            v-if="
-                                (p.variants || []).length &&
-                                (!p.price || Number(p.price) <= 0) &&
-                                !p.isCalculator
-                            "
-                            class="mt-1 text-[11px] text-slate-500 dark:text-slate-400"
-                        >
-                            Mulai dari var termurah ✨
-                        </p>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <button
-                            @click="openEdit(p)"
-                            class="w-11 h-11 rounded-2xl border flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            :class="[
-                                'bg-white/80 dark:bg-slate-900/40 border-slate-200/60 dark:border-white/10 text-slate-700 dark:text-slate-200 hover:bg-white',
-                            ]"
-                            title="Edit"
-                        >
-                            <Pencil :size="18" stroke-width="2.5" />
-                        </button>
-
-                        <button
-                            @click="remove(p)"
-                            class="w-11 h-11 rounded-2xl border flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
-                            :class="[
-                                'bg-rose-500/10 border-rose-300/40 dark:border-rose-500/30 text-rose-600 dark:text-rose-300 hover:bg-rose-500/15',
-                            ]"
-                            title="Hapus"
-                        >
-                            <Trash2 :size="18" stroke-width="2.5" />
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- FAB -->
+        <button
+            @click="resetForm(); showModal = true"
+            class="fixed bottom-24 right-4 lg:bottom-10 lg:right-10 w-14 h-14 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl shadow-xl shadow-indigo-600/30 flex items-center justify-center z-40 transition active:scale-90"
+        >
+            <Plus :size="28" stroke-width="2.5" />
+        </button>
 
         <!-- MODAL -->
         <Teleport to="body">
-            <transition name="modal-bounce">
-                <div
-                    v-if="showModal"
-                    class="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-6"
-                >
-                    <div
-                        class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity"
-                        @click="closeModal"
-                    ></div>
-
-                    <div
-                        class="relative w-full max-w-lg max-h-[85vh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-md rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-white/20 ring-1 ring-black/5 p-5 sm:p-8 flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95"
-                    >
-                    <div
-                        class="flex items-center justify-between mb-8 sticky top-0 bg-inherit z-10 pb-2 border-b border-dashed border-slate-200 dark:border-white/10"
-                    >
-                        <div>
-                            <h2
-                                class="text-2xl font-black text-slate-800 dark:text-white"
-                            >
-                                {{
-                                    editingProduct
-                                        ? "Edit Product"
-                                        : "New Product"
-                                }}
-                            </h2>
-                            <p class="text-xs font-semibold text-slate-400">
-                                Manage your sky service item
-                            </p>
+            <template v-if="showModal">
+                <div class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showModal = false"></div>
+                <div class="fixed inset-0 lg:inset-auto lg:top-1/2 lg:left-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 z-[70] bg-[#f8fafc] dark:bg-[#0b1120] lg:rounded-[2.5rem] lg:w-[900px] lg:h-[85vh] lg:shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom lg:zoom-in-95 duration-300">
+                    
+                    <div class="px-6 py-4 bg-white dark:bg-slate-900 border-b border-slate-200/50 dark:border-white/5 flex items-center justify-between shrink-0">
+                        <div class="flex items-center gap-3">
+                            <button @click="showModal = false" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition">
+                                <ChevronRight :size="18" class="rotate-180" />
+                            </button>
+                            <h2 class="text-lg font-black text-slate-800 dark:text-white">{{ form.id ? 'Edit Produk' : 'Produk Baru' }}</h2>
                         </div>
-                        <button
-                            @click="closeModal"
-                            class="p-2 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 hover:bg-slate-200 transition-colors"
-                        >
-                            <X :size="20" />
-                        </button>
-                    </div>
-
-                    <div class="space-y-6">
-                        <div class="space-y-2">
-                            <label
-                                class="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1"
-                                >Category</label
-                            >
-                            <div
-                                class="grid grid-cols-4 gap-2 bg-slate-100 dark:bg-black/20 p-1.5 rounded-2xl"
-                            >
-                                <button
-                                    v-for="t in [
-                                        'special',
-                                        'heart',
-                                        'candlerun',
-                                        'calculator',
-                                    ]"
-                                    :key="t"
-                                    @click="form.type = t"
-                                    class="flex flex-col items-center justify-center py-2 rounded-xl transition-all duration-300"
-                                    :class="
-                                        form.type === t
-                                            ? 'bg-white dark:bg-slate-700 shadow-sm text-indigo-600 dark:text-indigo-300 scale-100 font-bold'
-                                            : 'text-slate-400 scale-95 hover:bg-white/50'
-                                    "
-                                >
-                                    <component
-                                        :is="TypeIcon(t)"
-                                        :size="18"
-                                        class="mb-1"
-                                    /><span class="text-[9px] uppercase">{{
-                                        t === "calculator" ? "Calc" : t
-                                    }}</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="space-y-4">
-                            <div class="group">
-                                <label
-                                    class="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1 mb-1 block"
-                                    >Product Name</label
-                                >
-                                <input
-                                    v-model="form.name"
-                                    placeholder="e.g. Daily Heart"
-                                    class="w-full px-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-2 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500/30 outline-none font-bold text-slate-700 dark:text-slate-200 transition-all"
-                                />
-                            </div>
-                            <div class="group">
-                                <label
-                                    class="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1 mb-1 block"
-                                >
-                                    {{
-                                        form.type === "calculator" ||
-                                        form.isCalculator
-                                            ? "Unit Price (Per 1 Item)"
-                                            : "Price (IDR)"
-                                    }}
-                                </label>
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm"
-                                        >Rp</span
-                                    >
-                                    <input
-                                        v-model.number="form.price"
-                                        type="number"
-                                        placeholder="0"
-                                        class="w-full pl-12 pr-5 py-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border-2 border-transparent focus:bg-white dark:focus:bg-slate-900 focus:border-indigo-500/30 outline-none font-black text-lg text-slate-700 dark:text-slate-200 tabular-nums transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            class="bg-slate-50 dark:bg-slate-900/30 rounded-[1.5rem] p-1 border border-slate-100 dark:border-white/5 overflow-hidden"
-                        >
-                            <div
-                                class="flex items-center justify-between px-4 py-3 bg-white dark:bg-white/5 rounded-t-[1.3rem] shadow-sm"
-                            >
-                                <div
-                                    class="flex items-center gap-2 text-slate-600 dark:text-slate-300"
-                                >
-                                    <Layers
-                                        :size="16"
-                                        class="text-indigo-500"
-                                    /><span
-                                        class="text-xs font-bold uppercase tracking-wide"
-                                        >Variants</span
-                                    >
-                                </div>
-                                <button
-                                    @click="addVariant"
-                                    class="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 transition-colors"
-                                >
-                                    + ADD OPTION
-                                </button>
-                            </div>
-                            <div class="p-2 space-y-1">
-                                <div
-                                    v-if="!form.variants.length"
-                                    class="text-center py-6 text-slate-400 text-xs italic"
-                                >
-                                    No variants added.
-                                </div>
-                                <div
-                                    v-for="(v, idx) in form.variants"
-                                    :key="idx"
-                                    class="flex items-center gap-2 p-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-white/5 shadow-sm"
-                                >
-                                    <div
-                                        class="w-6 h-6 flex items-center justify-center text-slate-300 font-mono text-[10px]"
-                                    >
-                                        {{ idx + 1 }}
-                                    </div>
-                                    <input
-                                        v-model="v.name"
-                                        placeholder="Option Name"
-                                        class="flex-1 bg-transparent text-xs font-bold outline-none text-slate-700 dark:text-slate-200"
-                                    />
-                                    <div
-                                        class="flex items-center bg-slate-100 dark:bg-black/20 rounded-lg px-2 py-1"
-                                    >
-                                        <span
-                                            class="text-[10px] text-slate-400 mr-1"
-                                            >Rp</span
-                                        ><input
-                                            v-model.number="v.price"
-                                            type="number"
-                                            class="w-16 bg-transparent text-xs font-bold outline-none tabular-nums text-right"
-                                            placeholder="0"
-                                        />
-                                    </div>
-                                    <button
-                                        @click="removeVariant(idx)"
-                                        class="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg"
-                                    >
-                                        <MinusCircle :size="16" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="pt-2">
-                            <button
-                                @click="showAdvanced = !showAdvanced"
-                                class="flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-indigo-500 transition-colors mx-auto"
-                            >
-                                <MoreHorizontal :size="16" />{{
-                                    showAdvanced
-                                        ? "Hide Advanced Settings"
-                                        : "Show Advanced Settings"
-                                }}
+                        <div class="flex gap-2">
+                             <button v-if="form.id" @click="confirmDelete({id: form.id})" class="text-rose-500 p-2 hover:bg-rose-50 rounded-xl transition">
+                                <Trash2 :size="20"/>
                             </button>
                         </div>
+                    </div>
 
-                        <div
-                            v-if="showAdvanced"
-                            class="grid grid-cols-2 gap-4 animate-in fade-in zoom-in-95"
-                        >
-                            <div class="col-span-2 group">
-                                <label
-                                    class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
-                                    >CUSTOM ID</label
-                                >
-                                <input
-                                    v-model="form.id"
-                                    placeholder="Auto-generated"
-                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-mono text-slate-600 dark:text-slate-300 border-none"
-                                />
+                    <div class="flex border-b border-slate-200/50 dark:border-white/5 bg-white dark:bg-slate-900 shrink-0">
+                        <button v-for="tab in modalTabs" :key="tab.id" @click="activeTab = tab.id"
+                            class="flex-1 py-4 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 border-b-2 transition-colors relative"
+                            :class="activeTab === tab.id ? 'text-indigo-600 border-indigo-600 bg-indigo-50/50 dark:bg-indigo-900/10' : 'text-slate-400 border-transparent hover:bg-slate-50 dark:hover:bg-white/5'">
+                            <component :is="tab.icon" :size="16" /> {{ tab.label }}
+                        </button>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-6 custom-scroll bg-[#f8fafc] dark:bg-[#0b1120]">
+                        <div class="max-w-3xl mx-auto space-y-6">
+                            
+                            <!-- INFO TAB -->
+                            <div v-if="activeTab === 'info'" class="space-y-6 animate-in fade-in">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="md:col-span-2">
+                                        <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block">Nama Produk</label>
+                                        <input v-model="form.name" class="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3.5 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500 placeholder-slate-300">
+                                    </div>
+                                    <div class="md:col-span-2">
+                                        <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block">Harga (IDR)</label>
+                                        <input v-model.number="form.price" type="number" class="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3.5 text-lg font-black text-indigo-600 shadow-sm focus:ring-2 focus:ring-indigo-500">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-[10px] font-black uppercase text-slate-400 pl-1 mb-1 block">Deskripsi</label>
+                                    <textarea v-model="form.desc" rows="3" class="w-full bg-white dark:bg-slate-900 border-none rounded-xl px-4 py-3.5 text-sm font-medium shadow-sm focus:ring-2 focus:ring-indigo-500 resize-none"></textarea>
+                                </div>
                             </div>
-                            <div class="group">
-                                <label
-                                    class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
-                                    >TAG LABEL</label
-                                >
-                                <input
-                                    v-model="form.tag"
-                                    placeholder="Label"
-                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-bold border-none"
-                                />
+
+                            <!-- CONFIG TAB -->
+                            <div v-else-if="activeTab === 'config'" class="space-y-6 animate-in fade-in">
+                                <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5">
+                                    <h3 class="font-black text-sm mb-4">Kategori & Tipe</h3>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase">Kategori</label>
+                                            <select v-model="form.category" class="w-full mt-1 bg-slate-50 dark:bg-black/20 border-none rounded-xl px-3 py-3 text-sm font-bold">
+                                                <option>Seasonal Pass</option>
+                                                <option>Candle Run</option>
+                                                <option>Heart</option>
+                                                <option>Bundles</option>
+                                                <option>Cosmetics</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-[10px] font-bold text-slate-400 uppercase">Tipe</label>
+                                            <select v-model="form.type" class="w-full mt-1 bg-slate-50 dark:bg-black/20 border-none rounded-xl px-3 py-3 text-sm font-bold">
+                                                <option value="seasonal">Seasonal Pass</option>
+                                                <option value="daily-cr">Daily CR</option>
+                                                <option value="pilot">Joki Akun</option>
+                                                <option value="instant-heart">Instant Heart</option>
+                                                <option value="item-gift">Gift Item (IAP)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Variants Management -->
+                                    <div class="mt-6 border-t border-slate-100 dark:border-white/5 pt-4">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <h3 class="font-black text-xs uppercase text-slate-400">Varian Produk</h3>
+                                            <button @click="addVariant" class="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-bold">+ Varian</button>
+                                        </div>
+                                        <div v-if="form.variants.length === 0" class="text-center py-6 border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">
+                                            <p class="text-xs text-slate-400 font-medium">Single Price (Harga Tunggal)</p>
+                                        </div>
+                                        <div v-else class="space-y-3">
+                                            <div v-for="(v, idx) in form.variants" :key="idx" class="flex items-start gap-2 bg-slate-50 dark:bg-black/20 p-3 rounded-xl relative group">
+                                                <div class="flex-1 space-y-2">
+                                                    <input v-model="v.name" placeholder="Nama Varian" class="w-full bg-white dark:bg-slate-800 border-none rounded-lg px-3 py-2 text-xs font-bold shadow-sm">
+                                                    <input v-model.number="v.price" type="number" placeholder="Rp 0" class="w-full bg-white dark:bg-slate-800 border-none rounded-lg px-3 py-2 text-xs font-mono text-indigo-600 shadow-sm">
+                                                </div>
+                                                <button @click="removeVariant(idx)" class="absolute top-2 right-2 text-rose-400 hover:text-rose-600 p-1"><X :size="14"/></button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Calculator Toggle & Config -->
+                                    <div v-if="form.type === 'instant-heart' || form.isCalculator" class="mt-4 p-4 bg-pink-50 dark:bg-pink-900/10 rounded-2xl border border-pink-100 dark:border-pink-900/20 space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-800/30 text-pink-500 flex items-center justify-center"><Calculator :size="20"/></div>
+                                                <div>
+                                                    <p class="font-black text-sm text-pink-600 dark:text-pink-300">MiniHeart Calculator</p>
+                                                    <p class="text-xs text-pink-400">Aktifkan mode kalkulator</p>
+                                                </div>
+                                            </div>
+                                            <button @click="form.isCalculator = !form.isCalculator" class="w-12 h-7 rounded-full transition-colors relative" :class="form.isCalculator ? 'bg-pink-500' : 'bg-slate-300'">
+                                                <div class="absolute top-1 left-1 bg-white w-5 h-5 rounded-full transition-transform shadow-md" :class="form.isCalculator ? 'translate-x-5' : 'translate-x-0'"></div>
+                                            </button>
+                                        </div>
+
+                                        <!-- Instant Heart Specific Configs -->
+                                        <div v-if="form.isCalculator" class="pt-4 border-t border-pink-200 dark:border-pink-800/30 space-y-4 animate-in fade-in">
+                                            
+                                            <!-- Manual Unit Price -->
+                                            <div>
+                                                <label class="text-[10px] font-black uppercase text-pink-500 mb-1 block">Harga Manual Per Unit (Eceran)</label>
+                                                <div class="relative">
+                                                    <span class="absolute left-4 top-3.5 text-xs font-bold text-pink-400">Rp</span>
+                                                    <input v-model.number="form.config.pricePerHeart" type="number" placeholder="Contoh: 1500" class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-900 border-none rounded-xl text-sm font-bold shadow-sm focus:ring-2 focus:ring-pink-500">
+                                                </div>
+                                                <p class="text-[10px] text-pink-400 mt-1">*Harga dasar per heart jika beli eceran.</p>
+                                            </div>
+
+                                            <!-- Quick Picks / Bundles -->
+                                            <div>
+                                                <div class="flex items-center justify-between mb-2">
+                                                    <label class="text-[10px] font-black uppercase text-pink-500">Quick Picks (Paket Hemat)</label>
+                                                    <button @click="() => { if(!form.config.quickPicks) form.config.quickPicks = []; form.config.quickPicks.push({ amount: 10, price: 0, label: '' }) }" class="px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300 rounded-lg text-[10px] font-bold">+ Tambah Paket</button>
+                                                </div>
+                                                
+                                                <div class="space-y-2">
+                                                    <div v-if="!form.config.quickPicks || form.config.quickPicks.length === 0" class="p-4 rounded-xl bg-white/50 dark:bg-black/20 text-center text-xs text-pink-400 font-medium border border-dashed border-pink-200 dark:border-pink-800/30">
+                                                        Belum ada paket Quick Pick
+                                                    </div>
+                                                    <div v-for="(bundle, idx) in form.config.quickPicks" :key="idx" class="p-3 bg-white dark:bg-slate-900 rounded-xl border border-pink-100 dark:border-pink-800/20 shadow-sm relative group">
+                                                        <button @click="form.config.quickPicks.splice(idx, 1)" class="absolute -top-2 -right-2 bg-rose-500 text-white w-6 h-6 rounded-full flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition"><X :size="12" /></button>
+                                                        
+                                                        <div class="grid grid-cols-3 gap-2 mb-2">
+                                                            <div>
+                                                                <label class="text-[10px] text-slate-400">Jumlah (Qty)</label>
+                                                                <input v-model.number="bundle.amount" type="number" class="w-full bg-slate-50 dark:bg-black/20 border-none rounded-lg px-2 py-1.5 text-xs font-bold">
+                                                            </div>
+                                                            <div class="col-span-2">
+                                                                <label class="text-[10px] text-slate-400">Total Harga Paket</label>
+                                                                <input v-model.number="bundle.price" type="number" class="w-full bg-slate-50 dark:bg-black/20 border-none rounded-lg px-2 py-1.5 text-xs font-bold text-pink-600">
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <label class="text-[10px] text-slate-400">Label (Opsional)</label>
+                                                            <input v-model="bundle.label" placeholder="Cth: Paket S" class="w-full bg-slate-50 dark:bg-black/20 border-none rounded-lg px-2 py-1.5 text-xs font-medium">
+                                                        </div>
+                                                        
+                                                        <!-- Helper: Unit Price Calculation -->
+                                                        <div v-if="bundle.amount > 0 && bundle.price > 0" class="mt-2 text-[10px] text-emerald-500 font-bold bg-emerald-50 dark:bg-emerald-900/10 px-2 py-1 rounded-lg inline-block">
+                                                            ~{{ Math.round(bundle.price / bundle.amount) }} / unit
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5">
+                                    <h3 class="font-black text-sm mb-4">Fitur Badge</h3>
+                                    <div class="space-y-2">
+                                        <div v-for="(feat, idx) in form.features" :key="idx" class="flex gap-2">
+                                            <input v-model="form.features[idx]" class="flex-1 bg-slate-50 dark:bg-black/20 border-none rounded-xl px-3 py-2 text-sm font-medium">
+                                            <button @click="removeFeature(idx)" class="text-rose-500 p-2"><X :size="16"/></button>
+                                        </div>
+                                        <button @click="addFeature" class="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold">+ Tambah Fitur</button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="group">
-                                <label
-                                    class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
-                                    >ORDER</label
-                                >
-                                <input
-                                    v-model.number="form.order"
-                                    type="number"
-                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-bold border-none"
-                                />
-                            </div>
-                            <div class="col-span-2 group">
-                                <label
-                                    class="text-[10px] font-bold text-slate-400 ml-2 mb-1 block"
-                                    >DESCRIPTION</label
-                                >
-                                <textarea
-                                    v-model="form.desc"
-                                    rows="2"
-                                    class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xs font-medium border-none resize-none"
-                                    placeholder="Short description..."
-                                ></textarea>
+
+                            <!-- SYSTEM TAB -->
+                            <div v-else-if="activeTab === 'system'" class="space-y-6 animate-in fade-in">
+                                 <div class="flex items-center justify-between bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5">
+                                    <div>
+                                        <p class="font-black text-sm text-slate-800 dark:text-white">Status</p>
+                                        <p class="text-xs text-slate-400">Tampilkan di toko?</p>
+                                    </div>
+                                    <button @click="form.isActive = !form.isActive" class="w-14 h-8 rounded-full transition-colors relative" :class="form.isActive ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'">
+                                        <div class="absolute top-1 left-1 bg-white w-6 h-6 rounded-full transition-transform shadow-md" :class="form.isActive ? 'translate-x-6' : 'translate-x-0'"></div>
+                                    </button>
+                                </div>
+                                <div class="bg-white dark:bg-slate-900 p-5 rounded-3xl shadow-sm border border-slate-100 dark:border-white/5">
+                                    <h3 class="font-black text-sm mb-4 text-rose-500">User Input Fields</h3>
+                                    <div class="space-y-3">
+                                        <div v-for="(field, idx) in form.config.formFields" :key="idx" class="p-3 bg-slate-50 dark:bg-black/20 rounded-2xl space-y-2 relative">
+                                            <button @click="removeField(idx)" class="absolute top-2 right-2 text-rose-400"><X :size="14"/></button>
+                                            <div class="grid grid-cols-2 gap-2">
+                                                <input v-model="field.label" placeholder="Label" class="bg-white dark:bg-slate-800 border-none rounded-lg px-2 py-1.5 text-xs font-bold">
+                                                <input v-model="field.key" placeholder="Key" class="bg-white dark:bg-slate-800 border-none rounded-lg px-2 py-1.5 text-xs font-mono">
+                                            </div>
+                                            <div class="flex gap-2 items-center text-xs">
+                                                <input type="checkbox" v-model="field.required" class="rounded text-indigo-600 focus:ring-indigo-500 border-none bg-white">
+                                                <span class="font-bold text-slate-500">Wajib Diisi</span>
+                                            </div>
+                                        </div>
+                                        <button @click="addField" class="w-full py-3 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold border border-indigo-100 border-dashed">+ Tambah Field</button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <div
-                        class="mt-8 pt-4 border-t border-slate-100 dark:border-white/10 flex gap-3"
-                    >
-                        <button
-                            @click="closeModal"
-                            class="flex-1 py-4 min-h-[48px] rounded-2xl font-bold text-sm text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:scale-[0.98]"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            @click="save"
-                            class="flex-[2] py-4 min-h-[48px] rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm shadow-xl shadow-indigo-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                        >
-                            <Check :size="18" stroke-width="3" /> Save Product
+                    <div class="p-4 bg-white dark:bg-slate-900 border-t border-slate-200/50 dark:border-white/5 shrink-0">
+                        <button @click="saveProduct" class="w-full py-4 rounded-2xl bg-indigo-600 text-white font-black text-sm shadow-xl shadow-indigo-600/30 active:scale-[0.98] transition flex items-center justify-center gap-2">
+                            <Check :size="18" stroke-width="3" />
+                            Simpan Perubahan
                         </button>
                     </div>
                 </div>
+            </template>
+        </Teleport>
+
+        <!-- DELETE MODAL -->
+        <Teleport to="body">
+            <div v-if="showDeleteConfirm" class="fixed inset-0 z-[80] flex items-center justify-center p-8">
+                <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" @click="showDeleteConfirm = false"></div>
+                <div class="relative bg-white dark:bg-slate-900 w-full max-w-xs rounded-[2rem] p-6 text-center shadow-2xl">
+                    <div class="w-16 h-16 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Trash2 :size="28" />
+                    </div>
+                    <h3 class="font-black text-lg mb-2">Hapus Produk?</h3>
+                    <p class="text-sm text-slate-500 mb-6">Yakin ingin menghapus <b>{{ itemToDelete?.name }}</b>? Tidak bisa dibatalkan.</p>
+                    <div class="flex gap-3">
+                        <button @click="showDeleteConfirm = false" class="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold rounded-xl">Batal</button>
+                        <button @click="deleteItem" class="flex-1 py-3 bg-rose-500 text-white font-bold rounded-xl shadow-lg shadow-rose-500/30">Hapus</button>
+                    </div>
+                </div>
             </div>
-        </transition>
         </Teleport>
     </div>
 </template>
 
 <style scoped>
-.modal-bounce-enter-active {
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-.modal-bounce-leave-active {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.modal-bounce-enter-from,
-.modal-bounce-leave-to {
-    opacity: 0;
-    transform: scale(0.9) translateY(20px);
-}
-.custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 20px;
-}
-.dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: #334155;
-}
-input[type="number"]::-webkit-inner-spin-button,
-input[type="number"]::-webkit-outer-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
+.custom-scroll::-webkit-scrollbar { display: none; }
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
